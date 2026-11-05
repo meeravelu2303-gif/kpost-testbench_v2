@@ -114,7 +114,7 @@ counts. Regression keeps the strict time budgets.
 **Deliberately without an API write in sanity: User Management (business).** All 8 of its writes (add
 member, terminate, reset password, hold/release, backup admin, company, bank, role) are `sideEffect:
 'global'`: they create, end or change real business accounts. The production guard refuses every
-`global` write on this environment and no flag unlocks it (`tests/kpost-api/flows/admin-member-lifecycle.spec.ts`
+`global` write on this environment and no flag unlocks it (`tests/kpost-api/flows/admin/admin-member-lifecycle.spec.ts`
 is written and stays skipped). Its API sanity is the reads; its write paths are covered on screen
 (`usermanagement-e2e.spec.ts`).
 
@@ -186,7 +186,7 @@ without `maintenance/` (one-time setup), and `test:regression:kpost-admin-ui` ru
 posting stays off in every level (it creates real accounts); `product:kpost-admin` turns it on.
 
 **KPost API regression is the full product run** (since 2026-10-27): chosen by folder too (every
-`tests/kpost-api/` folder except `concurrency/` and `kos/`), with `ALLOW_DESTRUCTIVE_TESTS`,
+`tests/kpost-api/` folder except `excluded/` (concurrency and KDoc)), with `ALLOW_DESTRUCTIVE_TESTS`,
 `VALIDATION_PROFILE=FULL` and `WRITE_FUZZ` set as `product:kpost-api` sets them, and without the
 `@sanity-sweep` copy. It runs every test `product:kpost-api` runs, plus the 23 smoke checks (≈11,200).
 Before, the `@regression` tag skipped the engine checks of ~100 write endpoints (`@destructive`), every

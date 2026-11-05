@@ -7,7 +7,7 @@ import {
   requireAccounts,
   requireFlags,
   restoreSavedSession,
-} from './support/journey';
+} from '../support/journey';
 
 /**
  * Journey 7: A logs out, protected screens (and Back) go to login, A signs in again and works. The

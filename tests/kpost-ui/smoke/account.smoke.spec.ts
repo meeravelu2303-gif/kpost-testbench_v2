@@ -2,7 +2,7 @@ import { TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { NAV_LINKS } from '@ui/screens';
-import { requirePersonalAccount } from './smoke-ui';
+import { requirePersonalAccount } from '../support/smoke-ui';
 
 /**
  * UI SMOKE · the signed-in user's own data reaches the screen, and the app's navigation works:

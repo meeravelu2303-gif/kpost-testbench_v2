@@ -3,7 +3,39 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-05 (latest) — KMail API contract/schema coverage closed; five web-app bodies the server refuses
+### 2026-11-05 (latest) — Test tree restructured: `tests/<product>/<type>/[<module>/]`, with an inventory
+
+Owner: "make production grade folder structure … per product wise and type of test wise … it will show how
+many tests this test bench has and how many products".
+
+- **Layout:** `tests/<product>/<type>/[<module>/]<file>`, declared once in `src/config/test-layout.ts`. Six
+  product folders: kpost-api, kmail-api, admin-api, kpost-ui, admin-ui, kpost-mobile. The KPost UI moved
+  from `<module>/` to `<type>/<module>/`, the type being the kind its file name already ended in
+  (`-e2e`, `-functional`, `-screens`, `-validation`, `-api-handling`, …). The KPost API's engine/,
+  flows/, validation/ and security/ gained module folders. The Admin UI went from menu areas to flat type
+  folders. Mobile moved from `mobile/patrol_test/<module>/` to `tests/kpost-mobile/<type>/<module>/`
+  (e2e, validation, screens); `mobile:prepare`/`mobile:test` copy it into the app as `patrol_test/`, so a
+  `--target` now starts with its type (`e2e/auth/login_test.dart`). Framework self-tests went into area
+  folders (bug-tracker, validators, engine, contracts, coverage, safety, config, reporting, ui, layout,
+  local-tools).
+- **Excluded is a folder now:** KDoc/KOS (API kos/ and kword-object-authorization, UI kai/kad-document/
+  kos/kword) and concurrency moved to `<product>/excluded/`. Playwright never collects it (`testIgnore` on
+  the api and browser projects), on top of the `@kos`/`@concurrency` grep-invert.
+- **No file name changed** (component routing and the UI filing allow-list read the file name), and every
+  relative import was resolved before the move and recomputed after it (453 moves, 0 unresolved).
+- **Bug identity kept:** every moved UI spec maps to the path its bugs were hashed with, in
+  `ui-spec-renames.json` (228 entries added). API tags never used the path.
+- **Proof:** `playwright --list` (FULL flags) before and after. The test count of every file was identical
+  except the excluded ones, now not collected: KDoc/KOS 1,041 API tests and 8 UI tests, plus 7
+  concurrency tests.
+- **Inventory:** `npm run tests:inventory` writes `tests/README.md` (products, types, modules, files,
+  tests) and `docs/generated/test-inventory.json` (tests per file). The layout self-test
+  (`tests/framework/layout/test-layout.spec.ts`) fails on a misplaced or misnamed file, or a stale README.
+  At this date: 6 products, 19 test types, 479 test files, 19,727 tests (UI counted once per browser).
+- **Not moved:** decision-log history keeps the old paths; `reports/` and `docs/generated/` refresh on the
+  next run.
+
+### 2026-11-05 — KMail API contract/schema coverage closed; five web-app bodies the server refuses
 
 Owner: "first focus on the kmail api, cover with 100 percentage of Contract and schema test".
 

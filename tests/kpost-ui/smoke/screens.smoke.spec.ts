@@ -1,6 +1,6 @@
 import { TAGS } from '@config/constants';
 import { test } from '@fixtures';
-import { expectModuleScreensLoad, requirePersonalAccount, screensOf } from './smoke-ui';
+import { expectModuleScreensLoad, requirePersonalAccount, screensOf } from '../support/smoke-ui';
 
 /**
  * UI SMOKE · every module's screens load — one test per module, covering every screen in the screen

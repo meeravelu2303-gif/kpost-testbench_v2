@@ -1,8 +1,8 @@
-// Runs the bench's Patrol tests (mobile/patrol_test) on the running emulator or a USB phone, against the
+// Runs the bench's Patrol tests (tests/kpost-mobile) on the running emulator or a USB phone, against the
 // app copy that `npm run mobile:prepare` built (docs/proposals/mobile-testing.md). Never files bugs.
 //
 //   npm run mobile:test                                    every test
-//   npm run mobile:test -- --target auth/login_test.dart   one file (tests live in <module>/<flow>_test.dart)
+//   npm run mobile:test -- --target e2e/auth/login_test.dart   one file (tests live in <type>/<module>/<flow>_test.dart)
 //   npm run mobile:test -- --device emulator-5554          a chosen device
 //   npm run mobile:test -- --video                         record video on a phone too
 //   npm run mobile:test -- --max-minutes 45                stop a hung run later (default 30)
@@ -25,7 +25,7 @@ dotenv.config({ path: path.join(ROOT, '.env'), quiet: true });
 
 const COPY = path.join(ROOT, 'mobile', '.app');
 const APP = path.join(COPY, 'kpost');
-const TESTS = path.join(ROOT, 'mobile', 'patrol_test');
+const TESTS = path.join(ROOT, 'tests', 'kpost-mobile');
 const QA_HOSTS = new Set(['192.168.0.100']);
 const ANDROID_PACKAGE = 'com.kpost.kpost5_flutter';
 

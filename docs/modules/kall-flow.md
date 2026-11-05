@@ -82,7 +82,7 @@ Two PERSONAL accounts, so of 20 endpoints:
   `kallID`; the lifecycle creates one.
 - **12 writes gated** — every one is destructive and **none is `productionSafe`**. A call rings a
   device / notifies participants, and the clear endpoints delete the log. They are exercised only
-  through `tests/kpost-api/flows/kall-feature.spec.ts`, gated behind **`KALL_LIFECYCLE=true`**, each write
+  through `tests/kpost-api/flows/kall/kall-feature.spec.ts`, gated behind **`KALL_LIFECYCLE=true`**, each write
   carrying `allowLiveWrite: true` (the authorized-write control Katchup and Profile use), self-cleaning
   (a `finally` that calls `clearKallHistory` for both parties, so no failed step leaves an orphan).
 
@@ -111,7 +111,7 @@ cross-tenant target with a qualified key (`kpostID`/`companyID`/…), never a ba
 
 ## 6. The screen
 
-`/kall` → `<Kall />` (`MenuRoutes.js`). `tests/kpost-ui/kall/kall-screens.spec.ts` checks the workspace shell
+`/kall` → `<Kall />` (`MenuRoutes.js`). `tests/kpost-ui/screens/kall/kall-screens.spec.ts` checks the workspace shell
 (`.kall-layout-shell`), the call tabs (`.tabs-wrapper`) and the contact search ("Search Contacts")
 render for a logged-in user, across Chromium / Firefox / WebKit. Placing/scheduling a real call from
 the UI is not automated (it rings a device); that behaviour is the API lifecycle's job.

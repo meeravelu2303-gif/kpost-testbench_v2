@@ -1,7 +1,7 @@
 import type { Page } from '@playwright/test';
 import { TAGS } from '@config/constants';
 import { expect, test } from '@fixtures';
-import { requireAccounts, requireFlags, waitLoaded } from './support/journey';
+import { requireAccounts, requireFlags, waitLoaded } from '../support/journey';
 
 /**
  * Journey 8: A edits About and changes the theme; both survive a reload; both are restored.

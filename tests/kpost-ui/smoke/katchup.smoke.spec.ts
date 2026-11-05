@@ -1,7 +1,7 @@
 import { STORAGE_STATE_2, TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { openSession } from '../journeys/support/journey';
+import { openSession } from '../support/journey';
 import {
   deleteSentMessage,
   openComposerFor,
@@ -9,7 +9,7 @@ import {
   receivedMessageBySubject,
   sendMessage,
 } from '../support/katchup';
-import { requirePersonalAccount } from './smoke-ui';
+import { requirePersonalAccount } from '../support/smoke-ui';
 
 /**
  * UI SMOKE · Katchup — the core of the product: qatest1 sends a message with a Subject and qatest2

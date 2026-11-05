@@ -11,6 +11,12 @@ const resolveWorkers = (): number => Math.min(Math.max(1, env.WORKERS ?? 1), WOR
 /** One retry everywhere: absorbs a single transient blip without masking a repeatable failure. */
 const RETRIES = env.RETRIES ?? 1;
 
+/**
+ * `<product>/excluded/` holds the tests the owner took out of scope (KDoc/KOS, concurrency). The folder
+ * is never collected, on top of the `@kos` / `@concurrency` grep-invert on every command.
+ */
+const EXCLUDED = /[\\/]excluded[\\/]/;
+
 /** UI projects reuse the session saved by the `setup` project. */
 const browserProject = (
   name: string,
@@ -19,6 +25,7 @@ const browserProject = (
 ): Project => ({
   name,
   testDir: './tests/kpost-ui',
+  testIgnore: EXCLUDED,
   use: { ...device, storageState: STORAGE_STATE, ...extraUse },
   dependencies: ['setup'],
   retries: RETRIES,
@@ -106,6 +113,7 @@ export default defineConfig({
       name: 'api',
       testDir: './tests',
       testMatch: /(^|[\\/])tests[\\/](kpost|kmail|admin)-api[\\/].*\.spec\.ts$/,
+      testIgnore: EXCLUDED,
     },
     { name: 'framework', testDir: './tests/framework' },
   ],

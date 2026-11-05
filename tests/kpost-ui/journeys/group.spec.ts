@@ -3,7 +3,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { openGroupConversation } from '../support/katchup';
 import { createQaGroup, deleteQaGroup, type QaGroup } from '../support/groups';
-import { openSession, requireAccounts, requireFlags } from './support/journey';
+import { openSession, requireAccounts, requireFlags } from '../support/journey';
 
 /**
  * Journey 5: C creates a group with A and B via the API; A posts to all members; B sees the post; C

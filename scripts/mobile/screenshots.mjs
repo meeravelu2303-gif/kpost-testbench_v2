@@ -1,7 +1,7 @@
 // Phone screenshots for `npm run mobile:test`, so a mobile bug is filed with proof like a browser one.
 // A Patrol test records only what it asserts, and the realme C55 refuses screen recording, so the
 // runner watches the phone's log instead: each `BENCH-SCREEN <label>` line a test prints (dumpScreen in
-// mobile/patrol_test/support/first_run.dart, called just before the checks) and each Flutter test
+// tests/kpost-mobile/support/first_run.dart, called just before the checks) and each Flutter test
 // failure is a screenshot, taken over adb at that moment. Only the failed tests' screenshots are kept:
 //
 //   reports/mobile/<run>/<NN>-<test>-<label>.png

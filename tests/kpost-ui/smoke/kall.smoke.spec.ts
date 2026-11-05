@@ -1,7 +1,7 @@
 import { TAGS } from '@config/constants';
 import { expect, test } from '@fixtures';
 import { gotoKoolKall, meetingTitleField, openCreateKall } from '../support/kall';
-import { requirePersonalAccount } from './smoke-ui';
+import { requirePersonalAccount } from '../support/smoke-ui';
 
 /**
  * UI SMOKE · Kall — the scheduling entry point works: the Kool Kall tab opens and its "Create Kool

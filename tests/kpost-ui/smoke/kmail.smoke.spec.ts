@@ -7,8 +7,8 @@ import {
   openMail,
   openSession,
   sendMailFromUi,
-} from '../journeys/support/journey';
-import { requirePersonalAccount } from './smoke-ui';
+} from '../support/journey';
+import { requirePersonalAccount } from '../support/smoke-ui';
 
 /**
  * UI SMOKE · KMail — qatest1 writes and sends a mail on screen, qatest2 opens it in their own inbox,

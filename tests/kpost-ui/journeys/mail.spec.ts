@@ -9,7 +9,7 @@ import {
   requireAccounts,
   requireFlags,
   sendMailFromUi,
-} from './support/journey';
+} from '../support/journey';
 
 /**
  * Journey 3: A mails B, B reads and replies, A reads the reply, both delete in the UI (best-effort).

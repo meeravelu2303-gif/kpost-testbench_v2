@@ -24,7 +24,7 @@ import {
   openMail,
   openSession,
   sendMailFromUi,
-} from '../journeys/support/journey';
+} from '../support/journey';
 import { retryOrSkip } from '../../support/live-condition';
 
 /**

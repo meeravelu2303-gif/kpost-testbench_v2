@@ -41,10 +41,22 @@ test.describe('UI fingerprints survive the folder rename @framework', () => {
 
   test('a spec renamed to its kind (2026-10-31) keeps the tag of its old name', () => {
     expect(
-      uiFingerprint({ ...failure, file: 'tests/kpost-ui/katchup/katchup-actions-e2e.spec.ts' }),
+      uiFingerprint({ ...failure, file: 'tests/kpost-ui/e2e/katchup/katchup-actions-e2e.spec.ts' }),
     ).toBe(uiFingerprint({ ...failure, file: 'tests/e2e/katchup/katchup-actions.spec.ts' }));
-    expect(uiFingerprintPath('tests\\admin-ui\\auth\\admin-login-functional.spec.ts')).toBe(
+    expect(uiFingerprintPath('tests\\admin-ui\\functional\\admin-login-functional.spec.ts')).toBe(
       'tests/e2e-admin/auth/admin-login.spec.ts',
+    );
+  });
+
+  test('a spec moved into its type folder (2026-11-05) keeps the tag of its module-folder path', () => {
+    expect(uiFingerprintPath('tests/kpost-ui/e2e/katchup/katchup-actions-e2e.spec.ts')).toBe(
+      'tests/e2e/katchup/katchup-actions.spec.ts',
+    );
+    expect(
+      uiFingerprintPath('tests/kpost-ui/accessibility/platform/platform-axe-accessibility.spec.ts'),
+    ).toBe('tests/e2e/platform/accessibility-axe.spec.ts');
+    expect(uiFingerprintPath('tests/kpost-ui/excluded/kdoc/kos.spec.ts')).toBe(
+      'tests/e2e/verticals/kos.spec.ts',
     );
   });
 

@@ -1,6 +1,6 @@
 # Payload completeness audit
 
-**GENERATED — do not edit.** Written by `tests/framework/payload-audit.spec.ts`.
+**GENERATED — do not edit.** Written by `tests/framework/contracts/payload-audit.spec.ts`.
 
 **0** endpoints that run on live (`productionSafe`) omit a field present in
 the documented request *example* — the actual false-bug queue, because only a live-running

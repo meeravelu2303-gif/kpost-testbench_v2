@@ -21,7 +21,7 @@ import {
   requireFlags,
   sendMailFromUi,
   signInFromUi,
-} from './support/journey';
+} from '../support/journey';
 
 /**
  * Journey 1 (RTM-E2E01): 1a signs up a throwaway account and signs in; 1b walks Home → Profile → first

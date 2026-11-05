@@ -106,7 +106,7 @@ const PRODUCTS = {
   'kpost-api': {
     name: 'KPost API',
     project: 'api',
-    // Every folder but concurrency/ (excluded by the owner) and kos/ (paused): one per test kind.
+    // Every type folder; excluded/ (concurrency and KDoc, out of scope) is never listed.
     paths: [
       'tests/kpost-api/coverage',
       'tests/kpost-api/engine',

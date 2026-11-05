@@ -2,7 +2,7 @@ import { STORAGE_STATE, TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { contactsSearchBox, gotoContacts, openPeopleSearch } from '../support/contacts';
-import { A, requireAccounts, requireFlags, restoreSavedSession } from './support/journey';
+import { A, requireAccounts, requireFlags, restoreSavedSession } from '../support/journey';
 
 /**
  * Journey 6: A finds a person in KDirectory by mobile number, adds them, sees them in Contacts and on

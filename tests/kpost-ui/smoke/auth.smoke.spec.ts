@@ -1,7 +1,7 @@
 import { TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
-import { logoutFromUi, signInFromUi } from '../journeys/support/journey';
+import { logoutFromUi, signInFromUi } from '../support/journey';
 
 /**
  * UI SMOKE · Signup & Login — a real person can sign in through the login screen and sign out again.

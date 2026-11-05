@@ -229,7 +229,7 @@ Named maps exist for every group payloads reference (`KATCHUP_MESSAGE_TYPE`, `KA
 `KALL_MODE`, `KMAIL_PRIORITY`, `KDIARY_REMARKS`, `KPOST_MODULE`, …), plus `USER_TYPES` for the
 business tiers — the one group the workbook gives as labels only, with no numeric codes.
 
-[`tests/framework/types-contract.spec.ts`](../../tests/framework/types-contract.spec.ts) pins the
+[`tests/framework/contracts/types-contract.spec.ts`](../../tests/framework/contracts/types-contract.spec.ts) pins the
 groups and the load-bearing values, so a workbook edit that renames or renumbers something fails a
 test instead of silently changing what the bench sends.
 

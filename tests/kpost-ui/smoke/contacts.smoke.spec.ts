@@ -2,7 +2,7 @@ import { TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { contactsSearchBox, gotoContacts } from '../support/contacts';
-import { requirePersonalAccount } from './smoke-ui';
+import { requirePersonalAccount } from '../support/smoke-ui';
 
 /**
  * UI SMOKE · Contacts — the Contacts tab opens and finds a known contact: qatest2 is qatest1's

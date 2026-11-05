@@ -1,6 +1,6 @@
 # Coverage ledger — every endpoint, every screen
 
-**GENERATED — do not edit.** Written by `tests/framework/coverage-ledger.spec.ts`
+**GENERATED — do not edit.** Written by `tests/framework/coverage/coverage-ledger.spec.ts`
 (`npm run framework`). It reconciles the registry against the generated contracts, so it
 cannot drift from what is actually tested.
 
@@ -161,7 +161,7 @@ Covered: **13 / 15** routes.
 
 ## What "complete" is blocked on
 
-- **OTP-gated endpoints never run on live** (no bypass — a security property). `tests/framework/live-safety.spec.ts` keeps the flags in step with the contracts.
+- **OTP-gated endpoints never run on live** (no bypass — a security property). `tests/framework/safety/live-safety.spec.ts` keeps the flags in step with the contracts.
 - **`needs-business` modules** (admin, business-tier login) need a business company with members.
 - **`external`/`out-of-scope`** modules (KNews RSS, RedBus/ECommerce/MetaDee, KDOC) await an owner
   scope decision or are excluded per the BRD.

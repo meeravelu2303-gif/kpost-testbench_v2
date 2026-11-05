@@ -9,7 +9,7 @@ import {
   requireFlags,
   restoreSavedSession,
   waitLoaded,
-} from './support/journey';
+} from '../support/journey';
 import { signedIn } from '@fixtures/login-gate';
 
 /**

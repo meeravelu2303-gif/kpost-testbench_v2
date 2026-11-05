@@ -4,7 +4,7 @@
 //   - every server the app calls points at the QA backend from .env (KPOST_API_BASE_URL, KMAIL_API_BASE_URL),
 //     and the copy is refused when a live host is left in the app's code;
 //   - Patrol: the dev dependency, its pubspec section, the Android test runner and MainActivityTest;
-//   - the bench's tests (mobile/patrol_test) are copied in.
+//   - the bench's tests (tests/kpost-mobile) are copied in.
 //
 //   npm run mobile:prepare
 //   npm run mobile:prepare -- --tunnel     the phone reaches the QA backend through this PC (see below)
@@ -32,7 +32,7 @@ const SOURCE = path.resolve(option('--source', 'D:/KPOST_PROJECTS/kpost5_flutter
 const BRANCH = 'Test_ENV';
 const COPY = path.join(ROOT, 'mobile', '.app');
 const APP = path.join(COPY, 'kpost');
-const TESTS = path.join(ROOT, 'mobile', 'patrol_test');
+const TESTS = path.join(ROOT, 'tests', 'kpost-mobile');
 
 const PATROL_VERSION = '^4.10.0';
 const ANDROID_PACKAGE = 'com.kpost.kpost5_flutter';

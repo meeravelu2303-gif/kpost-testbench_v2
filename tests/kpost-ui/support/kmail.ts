@@ -2,7 +2,7 @@ import type { Locator, Page } from '@playwright/test';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { setupStep } from '@ui/setup-step';
-import { waitLoaded } from '../journeys/support/journey';
+import { waitLoaded } from './journey';
 
 interface ThreadMail {
   kmailID?: number;

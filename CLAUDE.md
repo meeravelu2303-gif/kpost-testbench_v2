@@ -21,7 +21,7 @@ defects in it and files them to Bugzilla, routed to the developer who owns the m
 | KMail API                | `kmail-api`    | Jitendra Kumar (jitendra@kpost.in)       | `KMAIL_API_BASE_URL` (testkmail.kpostindia.com, prefix `/testkmail/v2`) |
 | KPost UI                 | `kpost-ui`     | Ayyappan Ashok (ayyappan@kpostindia.com) | `BASE_URL` (http://192.168.0.100, nginx; it calls the :8989 API)        |
 | KPost Admin UI           | `admin-ui`     | Ayyappan Ashok                           | `ADMIN_UI_BASE_URL` (http://192.168.10.22:3001), `tests/admin-ui`       |
-| Kpost Mobile Application | `kpost-mobile` | Balaji J G (balajijg@kpostindia.com)     | the app copy calls `KPOST_API_BASE_URL`/v2; `mobile/patrol_test`        |
+| Kpost Mobile Application | `kpost-mobile` | Balaji J G (balajijg@kpostindia.com)     | the app copy calls `KPOST_API_BASE_URL`/v2; `tests/kpost-mobile`        |
 
 **The target is the TEST deployment only** — `test.kpostindia.com`, `testingapi`, `testkmail`, the Admin
 test box, and (since 2026-10-27, the owner's choice for every KPost API run) the KPost API QA backend
@@ -39,7 +39,7 @@ FRDs: `D:\Kpost Documents`.
 
 **Mobile app (decided 2026-10-27, being built since 2026-10-29):** Patrol plus open-source helpers only, Android
 on this PC, iOS later on a Mac. Phone account qatest7, second user qatest8 (no Playwright run uses them).
-`mobile/patrol_test/` (Dart) runs on the bench's patched copy of Test_ENV in `mobile/.app` (gitignored, QA
+`tests/kpost-mobile/` (Dart) runs on the bench's patched copy of Test_ENV in `mobile/.app` (gitignored, QA
 backend only): `npm run mobile:setup` (installs; after office hours) → `mobile:prepare` → `mobile:test`. Design,
 coverage and the developer blockers: `docs/proposals/mobile-testing.md`.
 
@@ -52,7 +52,7 @@ six per-module FRDs in `D:\Kpost Documents`; map in `docs/reference/requirements
 - **KDoc/KOS/KWord (`/kword/*`, `/kdoc`) is EXCLUDED from ALL testing (API and UI)** until the owner says
   otherwise. Wired into the commands (`--grep-invert @kos`, KOS dir excluded, `PAUSED_SCREENS`); a memory
   note alone is not enforcement. Open KDoc bugs only get a dated "paused" note.
-- **Concurrency is EXCLUDED** (`CONCURRENCY_PROBES=false` on every command, the `concurrency/` dir is never
+- **Concurrency is EXCLUDED** (`CONCURRENCY_PROBES=false` on every command, `tests/kpost-api/excluded/` is never
   listed, `@concurrency` is grep-inverted). Load/soak tests do not exist; per-request performance validators
   DO run as part of every FULL profile.
 - **Everything else is in scope, business tiers included.** `QATEST_ONLY=true` re-points the PERSONAL roles
@@ -95,28 +95,28 @@ src/bug-tracker/        failed test → Bugzilla bug, one folder per step: findi
                         · its commands in scripts/bug-tracker/, its self-tests in tests/framework/bug-tracker/
 src/reporting/          run-summary · report archive · report formatting
 src/ui/                 screens registry (PAUSED_SCREENS), failure-diagnostics
-tests/ — one folder per Bugzilla product, each with its own smoke/ and sanity/:
-  kpost-api/ kmail-api/ admin-api/   the three APIs share one layout by test kind (since 2026-10-31), files named
-                        <module>-<what>.spec.ts: engine/ (every endpoint × every validator: happy path + negative
-                        inputs + auth) · flows/ (happy-path lifecycles and workflows; <module>-feature.spec.ts =
-                        the module's lifecycle flow) · validation/ (negative business/input rules beyond the
-                        engine) · security/ (authz, IDOR, sessions) · coverage/ (no-HTTP: every documented
-                        endpoint defined) · maintenance/ (QA data cleanup) · performance/ (Admin) · support/.
-                        kpost-api keeps kos/ (KDoc, excluded) and concurrency/ (excluded) as folders.
-  kpost-ui/<module>/    KPost UI: auth home katchup kall kmail contacts group profile settings user-management
-                        verticals platform cross-layer (+ journeys/ support/)
-  admin-ui/<area>/      KPost Admin UI by menu area: auth screens admin-setup human-resources cross-layer (+ support/)
-  setup/ · framework/ · support/   logins that save sessions · bench self-tests · helpers shared by products
+tests/ — tests/<product>/<type>/[<module>/]<file> (since 2026-11-05). Declared once in src/config/test-layout.ts,
+  enforced by tests/framework/layout/test-layout.spec.ts; tests/README.md (`npm run tests:inventory`) shows the
+  products, types, files and test counts. Every product has smoke/ and sanity/; excluded/ = out of scope
+  (KDoc/KOS, concurrency), never collected (`testIgnore`, on top of the grep-invert).
+  kpost-api/            smoke sanity engine/<module> flows/<module> validation/<module> security/<module>
+                        coverage maintenance excluded/{kdoc,concurrency}. Files <module>-<what>.spec.ts;
+                        cross-module checks in platform/. engine = every endpoint × every validator (contract,
+                        happy path, negative inputs, auth); flows/<module>/<module>-feature.spec.ts = the lifecycle.
+  kmail-api/ admin-api/ the same types, flat (no module folder); admin-api adds performance/ maintenance/.
+  kpost-ui/<type>/<module>/<module>-<area>-<type>.spec.ts: e2e (multi-step flow that writes data), functional
+                        (one screen, read-only or local state), screens (render/health/layout sweeps), validation
+                        (invalid input refused AND valid input accepted), api-handling (server errors shown to the
+                        user), security, accessibility, resilience, responsive, visual, performance; plus smoke/
+                        sanity/ journeys/ cross-layer/ excluded/kdoc/ support/. The file name ends in its type folder.
+  admin-ui/<type>/      the UI types, flat: smoke sanity e2e functional screens security cross-layer support
+  kpost-mobile/<type>/<module>/<flow>_test.dart: e2e validation screens + support/ (Dart, Patrol); copied into
+                        mobile/.app (the app copy they run in; generated, gitignored) as its patrol_test/
+  framework/<area>/     bench self-tests: bug-tracker validators engine contracts coverage safety config reporting
+                        ui layout local-tools · setup/ logins that save sessions · support/ helpers shared by products
   UI bug tags are hashed from the pre-2026-10-27 folder names and pre-2026-10-31 file names (uiFingerprintPath,
-  `src/bug-tracker/findings/ui-spec-renames.json`), so a move or rename keeps each bug's tag: add the old
-  path there when you rename a UI spec.
-  UI file names: <module>/<module>-<area>-<kind>.spec.ts, every file ending in its kind: -e2e (multi-step
-  flow that writes data), -functional (one screen's behaviour, read-only or local state), -screens
-  (render/health/layout sweeps), -validation (invalid input refused AND valid input accepted),
-  -api-handling (server errors shown to the user), -security, -accessibility, -resilience, -responsive,
-  -visual, -performance, -smoke. KOS/KDoc specs (excluded) keep their names. Shared helpers go in support/.
-mobile/patrol_test/     KPost Mobile: <module>/<flow>_test.dart (auth/, katchup/, …) + support/; mobile/.app = the
-                        app copy they run in (generated, gitignored)
+  `src/bug-tracker/findings/ui-spec-renames.json`, new path → hashed path), so a move or rename keeps each bug's
+  tag: add the new path there whenever a UI spec moves. Never rename a UI spec's file name without it.
 contracts/, openapi/    GENERATED from the Excel workbook. Never hand-edit
 docs/                   guides/ (how to run) · reference/ (what the bench is + the decision log) · proposals/ · modules/ · ui/ · scope/
                         · generated/ (written by `framework`; never hand-edit) · api-specs/ (the KPost workbook
@@ -142,7 +142,7 @@ LIVE AWS S3 bucket: no file over `UPLOAD_MAX_BYTES`, 64 KB, leaves the API clien
 browser; `src/validation-engine/upload-guard.ts`; prove a size rule by stub or source, never a big file). Forgot-password and the profile's
 device/deactivation OTP senders text a real phone even with the OTP bypass, so they stay blocked; account
 actions that would damage a QA account (devices, password, access code, deactivate) run only on a throwaway
-`apiflowkpost<N>` account (`tests/kpost-api/flows/profile-throwaway-account.spec.ts`), deleted afterwards.
+`apiflowkpost<N>` account (`tests/kpost-api/flows/profile/profile-throwaway-account.spec.ts`), deleted afterwards.
 
 ## 4. The run → Bugzilla flow (one command per product)
 
@@ -261,7 +261,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
 - **Assert correct behaviour, not the predicted bug.** The live failure is the evidence.
 - **A batch failure isn't real until it reproduces alone.** Re-run isolated before filing.
 - **Read the real request bytes.** Playwright re-encodes a non-JSON string body; `rawBody` is sent as a
-  `Buffer` (`tests/framework/raw-body.spec.ts`). Check `sendTo()` literal bodies the same way.
+  `Buffer` (`tests/framework/safety/raw-body.spec.ts`). Check `sendTo()` literal bodies the same way.
 - **No response ≠ failed check.** A transport error/timeout/429 is "not re-checked", never "still broken".
 - **A 401 streak confined to one endpoint (happy path included) is a bench auth blip**, not a finding: re-test
   with a known-good token before writing it into Bugzilla.
@@ -285,7 +285,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
     `setup` project: only the tests that use that session skip as BLOCKED (`loginGate` / `signedIn()`);
   - a live condition (a random value collided, a list not refreshed, OTP refused) is `retryOrSkip()`
     (`tests/support/live-condition.ts`): retried in the same run, skipped only on the last attempt.
-    Proven by `tests/framework/run-continuity.spec.ts`, which runs a real Playwright project.
+    Proven by `tests/framework/reporting/run-continuity.spec.ts`, which runs a real Playwright project.
 
 ## 8. Contracts and conventions
 

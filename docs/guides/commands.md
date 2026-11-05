@@ -156,11 +156,11 @@ npm run mobile:setup     # once, AFTER office hours, as Administrator: Flutter, 
 npm run mobile:prepare   # the bench's copy of the Test_ENV app in mobile/.app, pointed at the QA backend,
                          # Patrol added. Re-run after the developers push to Test_ENV
 adb connect 192.168.10.237:5555   # the realme C55 over Wi-Fi (this PC cannot run the emulator)
-npm run mobile:test      # every test in mobile/patrol_test; -- --target auth/login_test.dart for one
+npm run mobile:test      # every test in tests/kpost-mobile; -- --target e2e/auth/login_test.dart for one
 ```
 
-Tests live in `mobile/patrol_test/<module>/<flow>_test.dart` (`auth/`, `katchup/`, …), shared helpers in
-`mobile/patrol_test/support/`. `mobile:test` records video on an emulator only (`-- --video` to try on a
+Tests live in `tests/kpost-mobile/<type>/<module>/<flow>_test.dart` (`e2e/auth/`, `validation/kall/`, …), helpers in
+`tests/kpost-mobile/support/`. `mobile:test` records video on an emulator only (`-- --video` to try on a
 phone) and stops a hung run after 30 minutes (`-- --max-minutes N`). If the phone's network cannot reach
 the QA ports, `npm run mobile:prepare -- --tunnel` relays them through this PC.
 

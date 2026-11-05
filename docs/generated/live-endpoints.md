@@ -1,6 +1,6 @@
 # Live endpoints — what we can and cannot test
 
-**GENERATED — do not edit.** Written by `tests/framework/live-coverage.spec.ts`
+**GENERATED — do not edit.** Written by `tests/framework/coverage/live-coverage.spec.ts`
 (`npm run framework`). Edit the endpoint definitions, not this file.
 
 Target: the test environment (`192.168.0.100:8989`, from `KPOST_API_BASE_URL`). Scope: PERSONAL accounts plus the

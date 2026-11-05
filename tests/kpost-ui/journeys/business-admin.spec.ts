@@ -2,7 +2,7 @@ import { STORAGE_STATE_BUSINESS, TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { openUserManagement } from '../support/usermanagement';
-import { requireFlags, waitLoaded } from './support/journey';
+import { requireFlags, waitLoaded } from '../support/journey';
 
 /**
  * Journey 9: the BUSINESS_S admin opens User Management (licences, members), then Katchup, then Home.

@@ -361,7 +361,7 @@ file is the example: with null markers the backend 500s, which would read as a f
 
 ## 12. Example test using the generic engine
 
-[`tests/kpost-api/engine/dashboard-reads.spec.ts`](../../tests/kpost-api/engine/dashboard-reads.spec.ts). This is the entire file:
+[`tests/kpost-api/engine/dashboard/dashboard-reads.spec.ts`](../../tests/kpost-api/engine/dashboard/dashboard-reads.spec.ts). This is the entire file:
 
 ```ts
 import { describeEndpointCases } from '@engine/endpoint-cases';
@@ -393,7 +393,7 @@ test('dashboard under the security profile', async ({ validationEngine }) => {
 
 KPost's business rules are asserted in the module feature specs, because a real rule needs state
 the generic sweep cannot set up (a second account, a created record, a prior step). The pattern,
-from [`tests/kpost-api/flows/kall-feature.spec.ts`](../../tests/kpost-api/flows/kall-feature.spec.ts):
+from [`tests/kpost-api/flows/kall/kall-feature.spec.ts`](../../tests/kpost-api/flows/kall/kall-feature.spec.ts):
 
 ```ts
 const repeat = await endpoints.sendTo(
@@ -459,7 +459,7 @@ export const userCreatedValidation: DatabaseValidation = {
 
 **Real database:** KPost runs on **MySQL**, and `MysqlDatabaseClient` (`mysql2/promise`) is the only live adapter. Identifiers are validated against a strict pattern and backtick-quoted, values are bound as `?` placeholders, and a `null` in a `where` becomes `IS NULL`. Credentials come from `DB_HOST`/`DB_PORT`/`DB_USER`/`DB_PASSWORD`/`DB_NAME` only.
 
-**One database per suite.** `DatabasePool.for(suite)` gives each suite its own client, because they do not share a target: **KPost and KMail** point at the KPOST_QA **test** database, where `DB_ALLOW_WRITES=true` is the intended setting, while **Admin** points at a **live production** database. `admin-api` is on `WRITE_BANNED_SUITES`, so non-`SELECT` statements are refused there regardless of `DB_ALLOW_WRITES` — the ban lives in code precisely so an environment variable cannot lift it. Note that `WITH` is **not** treated as a read: MySQL 8 allows a CTE to head an `UPDATE`/`DELETE`. See `tests/framework/admin-db-safety.spec.ts`.
+**One database per suite.** `DatabasePool.for(suite)` gives each suite its own client, because they do not share a target: **KPost and KMail** point at the KPOST_QA **test** database, where `DB_ALLOW_WRITES=true` is the intended setting, while **Admin** points at a **live production** database. `admin-api` is on `WRITE_BANNED_SUITES`, so non-`SELECT` statements are refused there regardless of `DB_ALLOW_WRITES` — the ban lives in code precisely so an environment variable cannot lift it. Note that `WITH` is **not** treated as a read: MySQL 8 allows a CTE to head an `UPDATE`/`DELETE`. See `tests/framework/safety/admin-db-safety.spec.ts`.
 
 ## 15. OpenAPI and schema integration
 
@@ -550,7 +550,7 @@ steps. Nothing in the engine, the validators or any other spec changes.
    as one array (`dashboardApis`), and `src/api/definitions/index.ts` spreads it into the registry.
 3. **Wrapper spec** — `tests/kpost-api/<module>/read.spec.ts` (and `write.spec.ts` with
    `{ transform: forWriteSweep }` for writes): three lines calling `describeEndpointCases` on the
-   module's tag. `tests/framework/sweep-completeness.spec.ts` fails until every new endpoint is
+   module's tag. `tests/framework/engine/sweep-completeness.spec.ts` fails until every new endpoint is
    reachable by a wrapper or listed as exempt with a reason — a definition cannot be quietly left out
    of the sweep.
 4. **Feature spec** — `tests/kpost-api/<module>/feature.spec.ts` for anything the sweep cannot do
@@ -580,7 +580,7 @@ export const cacheControlValidator = defineValidator({
 });
 ```
 
-Register it once in `src/validators/index.ts`. **Every** endpoint then runs it on the next test run, with no change to any wrapper spec or definition. The framework self-test _"a public endpoint, an authenticated read and a write all receive the same central validators"_ (`tests/framework/validation-engine.spec.ts`) proves the plan is the full registry for every kind of endpoint.
+Register it once in `src/validators/index.ts`. **Every** endpoint then runs it on the next test run, with no change to any wrapper spec or definition. The framework self-test _"a public endpoint, an authenticated read and a write all receive the same central validators"_ (`tests/framework/engine/validation-engine.spec.ts`) proves the plan is the full registry for every kind of endpoint.
 
 `SensitiveDataValidator` ([`security/sensitive-data.validator.ts`](../../src/validators/security/sensitive-data.validator.ts)) was added the same way. It scans **every** JSON response of the run for passwords and hashes, tokens, keys, private keys and Luhn-valid card numbers. The login endpoint legitimately returns a token, so it allowlists that one field: `security: { sensitiveFieldAllowlist: ['accessToken'] }`.
 

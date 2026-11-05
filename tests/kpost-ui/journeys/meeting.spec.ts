@@ -3,7 +3,7 @@ import { STORAGE_STATE_2, TAGS } from '@config/constants';
 import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { gotoKoolKall } from '../support/kall';
-import { C, openSession, requireAccounts, requireFlags } from './support/journey';
+import { C, openSession, requireAccounts, requireFlags } from '../support/journey';
 
 /**
  * Journey 4: C schedules a Kool Kall via the API inviting A and B; each sees it under Kall › Kool

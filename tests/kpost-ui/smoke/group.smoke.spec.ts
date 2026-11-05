@@ -3,7 +3,7 @@ import { testData } from '@config/test-data.config';
 import { expect, test } from '@fixtures';
 import { createQaGroup, deleteQaGroup, GROUP_CREATOR, type QaGroup } from '../support/groups';
 import { openGroupConversation } from '../support/katchup';
-import { requirePersonalAccount } from './smoke-ui';
+import { requirePersonalAccount } from '../support/smoke-ui';
 
 /**
  * UI SMOKE · Group — a group the user is added to appears in their Katchup and opens. The group is

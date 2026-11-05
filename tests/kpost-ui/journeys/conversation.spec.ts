@@ -9,7 +9,7 @@ import {
   receivedMessageBySubject,
   sendMessage,
 } from '../support/katchup';
-import { openSession, requireAccounts, requireFlags, waitLoaded } from './support/journey';
+import { openSession, requireAccounts, requireFlags, waitLoaded } from '../support/journey';
 
 /**
  * Journey 2: A writes to B with a Subject; B sees it live and on Home; B answers; A sees the answer
