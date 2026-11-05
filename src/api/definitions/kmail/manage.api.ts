@@ -32,7 +32,7 @@ export const setImportantApi = defineKmailEndpoint({
   note: 'needs a real kmailID; exercised by the lifecycle',
 });
 
-// Without `kmailStatusFlag` this 500s; its valid values are unclear (see manage-workflow.spec.ts).
+// Without `kmailStatusFlag` this 500s; its valid values are unclear (see kmail-manage-e2e.spec.ts).
 export const clearStatusApi = defineKmailEndpoint({
   id: 'kmail-clear-status',
   method: 'POST',
@@ -134,7 +134,7 @@ export const mailCredentialsApi = defineKmailEndpoint({
   summary: 'Fetch the caller’s mail send credentials',
   tags: [...M, 'sensitive'],
   // A read that returns the mailbox password when the body's password matches: never cleared for
-  // the engine; security/credential-disclosure.spec.ts drives it on the QA server with allowLiveRead.
+  // the engine; security/kmail-credential-disclosure-security.spec.ts drives it on the QA server with allowLiveRead.
   destructive: false,
   request: body(() => ({ kpostID: testData.kpostId, password: '' })),
   note: 'sensitive: returns credentials (masked in every report); driven only by the security spec',

@@ -1,3 +1,4 @@
+import path from 'node:path';
 import { apiRegistry } from '@api/definitions/index';
 import type { EndpointFilter } from '@api/registry/api-registry';
 import type { EndpointDefinition } from '@api/registry/endpoint-definition';
@@ -8,15 +9,18 @@ import { expect, test } from '@fixtures';
 import { formatReport } from '@reporting/report-formatter';
 import { validationRegistry } from '@validators/index';
 import { judgedCheckReason } from '../bug-tracker/gates/known-false-positives';
+import { checkTypeOf, type CheckType } from './check-types';
 import { ProductionSafetyError } from './production-guard';
+import { sharedRun } from './shared-run';
 import { resolveEndpoint, type ResolvedEndpoint } from './validation-policy';
 import type { ValidationReport, ValidationResult } from './validation-result';
 import { STAGE_ORDER } from './validator';
 
 /**
  * Reports each central validation as its own Playwright test case (`<endpoint> › <validator>`). The
- * engine runs once per endpoint and every case asserts its slice, so the endpoint's block is pinned
- * to one worker (`mode: 'default'`, not `serial`, so one failure does not skip the rest).
+ * engine runs once per endpoint and every case asserts its slice. With `checks`, a file reports only
+ * the cases of one test type (contract, negative, boundary, …); the run itself is shared by every
+ * type's file (`shared-run.ts`), so splitting the report into folders sends nothing extra.
  */
 export interface EndpointCaseOptions {
   profile?: ValidationProfile;
@@ -24,9 +28,11 @@ export interface EndpointCaseOptions {
   allowEmpty?: boolean;
   /** Rewrites each selected definition before it runs (e.g. `withSacrificialTarget` for writes). */
   transform?: (definition: EndpointDefinition) => EndpointDefinition;
+  /** Report only this test type's cases (`check-types.ts`). Omitted: every case (the sanity sweep). */
+  checks?: CheckType;
 }
 
-/** One engine run per endpoint and profile, shared by that endpoint's cases. */
+/** This worker's engine runs, per endpoint, profile and retry; `sharedRun` shares them across workers. */
 const runs = new Map<string, Promise<ValidationReport | ProductionSafetyError>>();
 
 interface PlannedCase {
@@ -41,6 +47,7 @@ interface PlannedCase {
 export function plannedCases(
   endpoint: ResolvedEndpoint,
   profile?: ValidationProfile,
+  checks?: CheckType,
 ): PlannedCase[] {
   const active = profile ?? env.VALIDATION_PROFILE;
   const central = validationRegistry
@@ -51,7 +58,7 @@ export function plannedCases(
     .sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage])
     .map((validator) => ({ name: validator.name, description: validator.description }));
 
-  return [
+  const all = [
     ...central,
     ...endpoint.businessRules.map((id) => ({
       name: `business-rule.${id}`,
@@ -62,6 +69,7 @@ export function plannedCases(
       description: `database validation "${id}"`,
     })),
   ];
+  return checks ? all.filter((planned) => checkTypeOf(planned.name) === checks) : all;
 }
 
 function tagsFor(endpoint: ResolvedEndpoint): string[] {
@@ -94,11 +102,14 @@ export function describeEndpointCases(
   }
 
   for (const endpoint of endpoints) {
+    const cases = plannedCases(endpoint, options.profile, options.checks);
+    // An endpoint with no check of this file's type is reported by the other type folders only.
+    if (!cases.length) continue;
     test.describe(`${endpoint.label} [${endpoint.id}]`, () => {
-      // Keep this endpoint's cases in one worker so they share its single engine run.
+      // Keep this endpoint's cases in one worker, in order; one failure does not skip the rest.
       test.describe.configure({ mode: 'default' });
 
-      for (const planned of plannedCases(endpoint, options.profile)) {
+      for (const planned of cases) {
         test(
           `${planned.name} — ${planned.description}`,
           { tag: tagsFor(endpoint) },
@@ -106,15 +117,15 @@ export function describeEndpointCases(
             const note = describeTestData();
             if (note) test.info().annotations.push({ type: 'test-data', description: note });
 
-            const runKey = `${endpoint.id}|${options.profile ?? env.VALIDATION_PROFILE}`;
+            // A retry re-runs the engine; every other case of the run reads the first run's report.
+            const runKey = `${endpoint.id}|${options.profile ?? env.VALIDATION_PROFILE}|retry-${test.info().retry}`;
             let run = runs.get(runKey);
             if (!run) {
-              run = validationEngine
-                .validate(endpoint.definition, options)
-                .catch((error: unknown) => {
-                  if (error instanceof ProductionSafetyError) return error;
-                  throw error instanceof Error ? error : new Error(String(error));
-                });
+              run = sharedRun(
+                { dir: path.join(test.info().project.outputDir, '.engine-runs', env.TEST_RUN_ID) },
+                runKey,
+                () => validationEngine.validate(endpoint.definition, options),
+              );
               runs.set(runKey, run);
             }
 

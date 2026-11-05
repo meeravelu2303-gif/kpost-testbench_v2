@@ -345,7 +345,7 @@ export const downloadThumbApi = idRead(
   '/readMail/downloadThumbnail/{uuid}',
   'Attachment thumbnail',
   pathParams(() => ({ uuid: '' })),
-  // Ownership of thumbnails is checked by attachment-idor.spec.ts with bench-owned accounts.
+  // Ownership of thumbnails is checked by kmail-attachment-idor-authorization.spec.ts with bench-owned accounts.
   'needs a real attachment uuid; genuinely unauthenticated on live (see note above), not a bench gap',
   ['attachment'],
 );

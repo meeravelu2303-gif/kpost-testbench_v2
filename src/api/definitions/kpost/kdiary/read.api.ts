@@ -47,7 +47,7 @@ export const getEventDateApi = defineKdiaryEndpoint({
   // events without checking ownership.
   request: body(() => ({ eventIds: [0] })),
   requestSchema: typesOnlySchema({ eventIds: [0] }),
-  note: 'needs a real eventID; CONFIRMED cross-tenant read-IDOR (no ownership check) — see tests/kpost-api/security/kdiary/kdiary-object-authorization.spec.ts',
+  note: 'needs a real eventID; CONFIRMED cross-tenant read-IDOR (no ownership check) — see tests/kpost-api/authorization/kdiary/kdiary-object-authorization.spec.ts',
 });
 
 export const getEventSelectedDateApi = defineKdiaryEndpoint({

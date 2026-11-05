@@ -121,7 +121,7 @@ export const forgotPasswordOrKpostIdApi = defineProfileEndpoint({
   sideEffect: 'external',
   otpDependent: 'sends',
   // This OTP is real, so the probes (each a send) are off; send-free negatives are in
-  // forgot-password-limited.spec.ts.
+  // common-forgot-password-negative.spec.ts.
   validations: {
     request: false,
     security: false,

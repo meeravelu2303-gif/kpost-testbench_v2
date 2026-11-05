@@ -3,7 +3,53 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-05 (latest) — Test tree restructured: `tests/<product>/<type>/[<module>/]`, with an inventory
+### 2026-11-05 (latest) — API tests split by test type, every API spec renamed `<module>-<what>-<type>`
+
+Owner: "the test files must have valid names … proper and neat … smoke, sanity, positive test, negative
+test, Boundary tests, Contract / schema tests, Data integrity tests etc., have separate folder".
+
+- **API type folders** (kpost-api, kmail-api, admin-api): smoke, sanity, contract, positive, negative,
+  boundary, authentication, authorization, security, performance, data-integrity, business-rules, e2e,
+  coverage, maintenance (+ excluded, support). engine/, flows/ and validation/ are gone.
+- **The engine's checks are reported by type.** Each check belongs to exactly one type
+  (`src/validation-engine/check-types.ts`: `response.status-code` and `authentication.valid-token` are
+  positive, `request.boundary-*` boundary, other `request.*` negative, `response.*`/`common.*` contract,
+  `database.*` data-integrity, `business-rule.*` business-rules, the rest by category). Each type folder has
+  one `<module>-endpoints-<type>.spec.ts` per module that has checks of that type: a single
+  `describeEndpointChecks(product, module, type)` call. Which endpoints each module sweeps is declared
+  once, in `src/validation-engine/endpoint-groups.ts` (the filters, transforms and describe titles of the
+  29+2+1 engine specs it replaces, unchanged). `tests/framework/engine/check-types.spec.ts` fails on a
+  check with no type, a type with checks but no file, or an empty file. No engine business-rule check
+  exists yet (KPost's rules are hand-written), so there are no `*-endpoints-business-rules` files.
+- **Still one engine run per endpoint.** Splitting the report must not multiply the requests, and the
+  aggregate checks (error format, information disclosure, sensitive data) must still see every exchange.
+  The first type file to reach an endpoint runs the engine and attaches the report (what the filer reads);
+  every other file reads it from `<outputDir>/.engine-runs/<TEST_RUN_ID>/` (`shared-run.ts`: a lock file
+  with the owner's pid, a dead owner is taken over; a retry is a new key and re-runs). Proven live on
+  `dashboard-home-msgs`: 46 cases in 8 type folders across 4 worker processes → one report attached, one
+  run stored. Bonus: a worker restarted after a failure no longer re-runs the endpoint.
+- **KMail and Admin engines moved to per-check cases.** Their engine was `describeEndpointContracts` (one
+  test per endpoint, failing on the blocking gate), and KMail's reads also ran a second time in
+  `read.spec.ts`. Both are now per-check cases split by type like KPost; `contract-suite.ts` is deleted.
+  Same endpoints (71 KMail, 34 Admin), each run once; counts 2,837 → 4,188 (KMail) and 330 → 1,962 (Admin).
+- **Hand-written specs moved by what they prove** (144 moves, 0 relative imports changed): IDOR/cross-user/
+  cross-tenant → authorization/; session and token specs → authentication/; CORS, PII, mass assignment,
+  credential and repository exposure → security/; DB-asserted and byte-integrity flows → data-integrity/;
+  rule specs and read-rule workflows → business-rules/; lifecycles → e2e/ (`<module>-lifecycle-e2e`);
+  recorded-gap and guard-refusal specs (no HTTP) → coverage/. Names lost their dates and vague words
+  (`katchup-idor-regression-2026-10-03` → `katchup-idor-authorization`, `common-gaps` →
+  `common-known-gaps-coverage`, `feature` → `lifecycle-e2e`). The layout test now enforces the name: an API
+  spec ends in `-<type>.spec.ts` (`.smoke.spec.ts` for smoke) and starts with its module (`kmail-`/`admin-`
+  for the flat products); `platform/` is no longer exempt.
+- **Unchanged on purpose:** every KPost API test title (15,557 before and after, none gone or new, compared
+  from `--list`), so `--grep "[endpoint-id]"`, the happy-path report and the filer are untouched; API bug
+  tags never used the path. UI and mobile names were left alone: their bug tags, Bugzilla component routing
+  and the UI filing allow-list read the file name, and they were already `<module>-<what>-<type>`.
+- **Run order:** with `--workers=1` files run alphabetically, so every endpoint's engine run now happens in
+  authentication/ (the first type folder), before the hand-written specs; maintenance/ still runs after
+  them (the boundary-filler cleanup needs that).
+
+### 2026-11-05 — Test tree restructured: `tests/<product>/<type>/[<module>/]`, with an inventory
 
 Owner: "make production grade folder structure … per product wise and type of test wise … it will show how
 many tests this test bench has and how many products".

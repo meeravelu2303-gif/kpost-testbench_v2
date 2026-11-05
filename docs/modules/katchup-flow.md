@@ -119,7 +119,7 @@ correctly sets `attachmentUuid` and full `attachmentCaptionDetails`. `katchup-se
 (`sendKatchupMsgMultiPart`) is confirmed legacy — not used by the current client, and even though it
 accepts a file part with a 200, it never actually attaches it (#614, closed WONTFIX 2026-09-26 since
 the route is dead code from the product's own perspective). See
-`presigned-attachment-workflow.spec.ts` for the live-verified flow, which also surfaced two real
+`katchup-attachment-upload-e2e.spec.ts` for the live-verified flow, which also surfaced two real
 defects in the download side: `katchup-download` serves the correct bytes but a hardcoded
 `Content-Type: image/jpeg` regardless of the real file type (**#617**), and
 `katchup-download-attachment`'s presigned GET URL hardcodes its ASCII `Content-Disposition` filename
@@ -182,7 +182,7 @@ counts it and it runs the moment the accounts arrive.
    accepted as-is (not rejected, not silently defaulted). `sendMessage` already does exactly that
    (200, `subject: ""` stored verbatim), so this is now the documented, correct behaviour — not a
    defect. #615 [KP-9DD851] closed as invalid (requirement changed after filing).
-   `lifecycle.spec.ts`'s "an empty subject is accepted" test confirms this.
+   `katchup-one-to-one-e2e.spec.ts`'s "an empty subject is accepted" test confirms this.
 2. **`recallMessage` payload** — `{msgID, groupFlag}` (live client) vs `{msgID, status:5}` (workbook)?
    (§2.1)
 3. **How many extra PERSONAL accounts** will you create, and their ids — needed for group (≥3), Cc and

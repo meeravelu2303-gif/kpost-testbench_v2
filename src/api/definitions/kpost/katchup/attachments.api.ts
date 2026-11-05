@@ -4,7 +4,7 @@ import { defineKatchupEndpoint } from './katchup-endpoint';
 
 /**
  * Katchup attachment endpoints, keyed by a real attachment `uuid` (live tests in
- * presigned-attachment-workflow.spec.ts). Downloads are binary, so `envelope: false`.
+ * katchup-attachment-upload-e2e.spec.ts). Downloads are binary, so `envelope: false`.
  */
 const ATTACH_TAGS = ['katchup-attachment', 'binary', 'needs-attachment'] as const;
 
@@ -101,7 +101,7 @@ export const oldDownloadApi = defineUndocumentedKpostEndpoint({
   tags: ['katchup', ...ATTACH_TAGS],
   envelope: false,
   contentType: 'application/octet-stream',
-  // A real uuid comes from presigned-attachment-workflow.spec.ts; standalone it is the not-found path.
+  // A real uuid comes from katchup-attachment-upload-e2e.spec.ts; standalone it is the not-found path.
   request: pathParams(() => ({ uuid: ABSENT_UUID })),
   pathParamsSchema: pathParamSchema('uuid'),
   evidence:

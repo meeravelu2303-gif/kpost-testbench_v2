@@ -176,7 +176,7 @@ export const sharedMessageInfoApi = defineKatchupEndpoint({
   // A POST read: destructive defaults true for POST, which would grep-drop it on live.
   destructive: false,
   request: body(() => ({ sharedMessageId: 0 })),
-  // Every sendMessage response carries a `sharedMessageId`; see shared-reference-workflow.spec.ts.
+  // Every sendMessage response carries a `sharedMessageId`; see katchup-shared-reads-e2e.spec.ts.
   note: 'needs a real sharedMessageId (every sent message has one — see the endpoint comment); 500s when given a real one',
 });
 
@@ -188,7 +188,7 @@ export const bulkMessageInfoApi = defineKatchupEndpoint({
   tags: [...READ_TAGS, 'share', 'needs-message-id'],
   destructive: false,
   request: body(() => ({ sharedMessageId: 0 })),
-  // Same sharedMessageId as above; see shared-reference-workflow.spec.ts.
+  // Same sharedMessageId as above; see katchup-shared-reads-e2e.spec.ts.
   note: 'needs a real sharedMessageId (every sent message has one); confirmed working live 2026-09-25',
 });
 
@@ -201,7 +201,7 @@ export const sharedMessageDetailsApi = defineKatchupEndpoint({
   destructive: false,
   request: pathParams(() => ({ msgID: 0 })),
   pathParamsSchema: pathParamSchema('msgID'),
-  // Takes a msgID from a plain send; see shared-reference-workflow.spec.ts.
+  // Takes a msgID from a plain send; see katchup-shared-reads-e2e.spec.ts.
   note: 'needs a real msgID; 500s when given a real one',
 });
 
@@ -214,7 +214,7 @@ export const referenceDetailsApi = defineKatchupEndpoint({
   destructive: false,
   request: body(() => ({ referenceMessageIDList: [], sourceMsgID: 0 })),
   // A plain send's msgID works here (no reply or forward needed); see
-  // shared-reference-workflow.spec.ts.
+  // katchup-shared-reads-e2e.spec.ts.
   note: 'needs real reference message ids; confirmed working live 2026-09-25 fed a plain sent msgID',
 });
 

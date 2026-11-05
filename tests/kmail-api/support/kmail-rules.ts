@@ -4,7 +4,7 @@ import { mailShape } from '@api/definitions/kmail/send.api';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 
 /**
- * Shared helpers for the KMail validation specs (`tests/kmail-api/validation/*-rules.spec.ts`):
+ * Shared helpers for the KMail validation specs (`tests/kmail-api/business-rules/kmail-*-business-rules.spec.ts`):
  * one call wrapper, a send that returns the new kmailID, the sender's thread row for a mail (with
  * its per-recipient transactions) and a cleanup that deletes a mail from every side that holds it.
  * Every address is one of our own QA accounts.

@@ -10,7 +10,7 @@ import { COMPANY_SCOPED_READ, defineAdminEndpoint } from './admin-endpoint';
 
 /*
  * Role-posting writes are `external` and refused unless ADMIN_ROLE_POSTING_LIVE is set; then only
- * role-posting-lifecycle.spec.ts sends them. The `role-posting-mutation` tag keeps them out of
+ * admin-role-posting-e2e.spec.ts sends them. The `role-posting-mutation` tag keeps them out of
  * every fuzzer.
  */
 const ROLE_POSTING_SIDE_EFFECT = env.ADMIN_ROLE_POSTING_LIVE

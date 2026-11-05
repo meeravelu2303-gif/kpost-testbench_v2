@@ -1,14 +1,12 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import { apiRegistry } from '@api/definitions/index';
 import type { EndpointFilter } from '@api/registry/api-registry';
-import { ROOT_DIR } from '@config/constants';
 import { DEFAULT_SUITE } from '@config/ownership.config';
+import { ENDPOINT_GROUPS } from '@engine/endpoint-groups';
 import { expect, test } from '@fixtures';
 
 /**
  * Every KPost API endpoint must be reached by the generic sweep, or be on the list below with a reason.
- * Wrappers are read from the spec files themselves, so the guard cannot drift from what runs.
+ * The sweeps are read from ENDPOINT_GROUPS, the one list every type folder's engine spec runs.
  */
 
 /** Endpoints a sweep deliberately does not reach, each with the reason. Keep it short and honest. */
@@ -26,52 +24,11 @@ const SWEEP_EXEMPT: Readonly<Record<string, string>> = {
 /** The paused KDoc/KOS module: excluded from every command until the owner says it is ready. */
 const PAUSED_TAG_PREFIX = 'kos-';
 
-/** The three API products, one folder each. */
-const API_TEST_DIRS = ['kpost-api', 'kmail-api', 'admin-api'].map((dir) =>
-  path.join(ROOT_DIR, 'tests', dir),
-);
-
-function specFiles(dir: string): string[] {
-  return fs.readdirSync(dir, { withFileTypes: true }).flatMap((entry) => {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) return specFiles(full);
-    return entry.name.endsWith('.spec.ts') ? [full] : [];
-  });
-}
-
-function stringList(source: string, key: string): string[] | undefined {
-  const match = new RegExp(`${key}:\\s*\\[([^\\]]*)\\]`).exec(source);
-  if (!match) return undefined;
-  return [...(match[1] ?? '').matchAll(/'([^']+)'/g)].map((m) => m[1] as string);
-}
-
-/**
- * The full-sanity read sweeps run at the SMOKE profile (no fuzz/injection/authz probes) and select by
- * a computed id list the parser would read as "every endpoint", so counting them would hide gaps.
- */
-const NOT_A_FULL_SWEEP = /[\\/](sanity[\\/]|sanity-read-sweep\.spec\.ts$)/;
-
-/** Every `describeEndpointCases` / `describeEndpointContracts` filter found in the wrapper files. */
+/** Every engine sweep, from the one place they are declared (the type folders' specs only name a module). */
 function sweepFilters(): EndpointFilter[] {
-  const filters: EndpointFilter[] = [];
-  for (const file of API_TEST_DIRS.flatMap(specFiles).filter((f) => !NOT_A_FULL_SWEEP.test(f))) {
-    const text = fs.readFileSync(file, 'utf8');
-    for (const call of text.matchAll(
-      /describeEndpoint(?:Cases|Contracts)\(\s*(\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\})/g,
-    )) {
-      const body = call[1] ?? '';
-      const filter: EndpointFilter = {
-        ...(stringList(body, 'tags') && { tags: stringList(body, 'tags') }),
-        ...(stringList(body, 'excludeTags') && { excludeTags: stringList(body, 'excludeTags') }),
-        ...(stringList(body, 'ids') && { ids: stringList(body, 'ids') }),
-        ...(stringList(body, 'suites') && {
-          suites: stringList(body, 'suites') as EndpointFilter['suites'],
-        }),
-      };
-      filters.push(filter);
-    }
-  }
-  return filters;
+  return Object.values(ENDPOINT_GROUPS).flatMap((modules) =>
+    Object.values(modules).flatMap((groups) => groups.map((group) => group.filter)),
+  );
 }
 
 test.describe('generic sweep completeness @framework', () => {
@@ -82,7 +39,7 @@ test.describe('generic sweep completeness @framework', () => {
   test('the wrapper files are discoverable', () => {
     expect(
       sweepFilters().length,
-      'sweep wrapper calls found in the API test folders',
+      'endpoint groups declared in src/validation-engine/endpoint-groups.ts',
     ).toBeGreaterThan(20);
   });
 
@@ -97,7 +54,7 @@ test.describe('generic sweep completeness @framework', () => {
 
     expect(
       unreached,
-      'endpoints no sweep wrapper selects: add a tag to a wrapper in an API test folder, or an entry with a reason to SWEEP_EXEMPT',
+      'endpoints no sweep selects: add a tag to a group in src/validation-engine/endpoint-groups.ts, or an entry with a reason to SWEEP_EXEMPT',
     ).toEqual([]);
   });
 

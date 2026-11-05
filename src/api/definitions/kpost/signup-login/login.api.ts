@@ -61,13 +61,13 @@ export const adminUserLoginApi = defineKpostEndpoint({
 export const generateJwTokensApi = defineKpostEndpoint({
   id: 'signup-login-generate-jwt',
   // Device-scoped: the refresh token must be redeemed with the same login's own access token, so
-  // the full case lives in session-lifecycle.spec.ts.
+  // the full case lives in signup-login-session-lifecycle-authentication.spec.ts.
   requirements: ['FR-SL-026', 'NFR-SEC01'],
   method: 'POST',
   path: '/v2/signupLogin/generateJWTokens/',
   summary: 'Exchange a refresh token for a new access token',
   tags: [...LOGIN_TAGS, 'token-refresh', 'needs-id'],
-  note: "device-scoped: needs a runtime refreshToken AND its own login's accessToken as authorization (see session-lifecycle.spec.ts)",
+  note: "device-scoped: needs a runtime refreshToken AND its own login's accessToken as authorization (see signup-login-session-lifecycle-authentication.spec.ts)",
   destructive: false,
   // Logs in first and reads the refresh token from that response.
   request: async (helpers) => {
@@ -121,7 +121,7 @@ export const userLogoutApi = defineKpostEndpoint({
   path: '/v2/signupLogin/userLogout/',
   summary: 'End the current session',
   // `session-ending` keeps it out of the engine, which would log out the shared cached session.
-  // Tested only by login-flow.spec.ts on its own session.
+  // Tested only by signup-login-login-authentication.spec.ts on its own session.
   tags: [...LOGIN_TAGS, 'session', 'session-ending'],
   authentication: { required: true },
   // Live: ends only the session we opened ourselves, on our own account.

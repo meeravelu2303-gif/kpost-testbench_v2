@@ -7,7 +7,7 @@
 
 | Products | Test types | Test files |  Tests |
 | -------: | ---------: | ---------: | -----: |
-|        6 |         19 |        479 | 19,727 |
+|        6 |         25 |        572 | 22,710 |
 
 Tests are counted the way the product commands run them (FULL profile): the API engine generates one
 test per endpoint × validator. UI tests are counted once; each browser (Chromium, Firefox, WebKit) runs
@@ -18,47 +18,66 @@ self-tests are listed separately below.
 
 | Folder                           | Bugzilla product         | Runs with              | Test types | Test files |      Tests |
 | -------------------------------- | ------------------------ | ---------------------- | ---------: | ---------: | ---------: |
-| [`kpost-api/`](kpost-api/)       | KPost API                | Playwright (API)       |          8 |        144 |     15,557 |
-| [`kmail-api/`](kmail-api/)       | KMail API                | Playwright (API)       |          7 |         30 |      2,837 |
-| [`admin-api/`](admin-api/)       | KPost Admin              | Playwright (API)       |          8 |         18 |        330 |
+| [`kpost-api/`](kpost-api/)       | KPost API                | Playwright (API)       |         15 |        223 |     15,557 |
+| [`kmail-api/`](kmail-api/)       | KMail API                | Playwright (API)       |         14 |         37 |      4,188 |
+| [`admin-api/`](admin-api/)       | KPost Admin              | Playwright (API)       |         13 |         25 |      1,962 |
 | [`kpost-ui/`](kpost-ui/)         | KPost UI                 | Playwright (browser)   |         15 |        239 |        833 |
 | [`admin-ui/`](admin-ui/)         | KPost Admin UI           | Playwright (browser)   |          7 |         12 |         45 |
 | [`kpost-mobile/`](kpost-mobile/) | Kpost Mobile Application | Patrol (Android phone) |          3 |         36 |        125 |
-| **Total**                        |                          |                        |            |    **479** | **19,727** |
+| **Total**                        |                          |                        |            |    **572** | **22,710** |
 
 ## The tree
 
 ```
 tests/
-├── kpost-api/            KPost API · 144 files · 15,557 tests
+├── kpost-api/            KPost API · 223 files · 15,557 tests
 │   ├── smoke/            1 file · 23 tests
 │   ├── sanity/           1 file · 2,138 tests
-│   ├── engine/           29 files · 12,990 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
-│   ├── flows/            45 files · 185 tests  (admin, aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
-│   ├── validation/       16 files · 59 tests  (aws, common, contacts, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
-│   ├── security/         37 files · 88 tests  (admin, aws, contacts, group, kall, katchup, kbooking, kdiary, knews, platform, profile, settings, signup-login)
-│   ├── coverage/         13 files · 72 tests
+│   ├── contract/         13 files · 3,710 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
+│   ├── positive/         16 files · 535 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
+│   ├── negative/         14 files · 3,185 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
+│   ├── boundary/         13 files · 530 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
+│   ├── authentication/   18 files · 1,077 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, platform, profile, settings, signup-login)
+│   ├── authorization/    41 files · 1,395 tests  (admin, aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, platform, profile, settings, signup-login)
+│   ├── security/         18 files · 1,862 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, platform, profile, settings, signup-login)
+│   ├── performance/      13 files · 795 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
+│   ├── data-integrity/   14 files · 46 tests  (contacts, kall, katchup, profile, settings, signup-login)
+│   ├── business-rules/   21 files · 95 tests  (aws, common, contacts, dashboard, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
+│   ├── e2e/              20 files · 77 tests  (admin, aws, common, contacts, group, kall, katchup, kbooking, kdiary, knews, profile, settings, signup-login)
+│   ├── coverage/         18 files · 87 tests
 │   ├── maintenance/      2 files · 2 tests
 │   └── excluded/         6 files · not collected  (concurrency, kdoc)
 │
-├── kmail-api/            KMail API · 30 files · 2,837 tests
+├── kmail-api/            KMail API · 37 files · 4,188 tests
 │   ├── smoke/            1 file · 3 tests
 │   ├── sanity/           1 file · 616 tests
-│   ├── engine/           2 files · 2,129 tests
-│   ├── flows/            8 files · 47 tests
-│   ├── validation/       4 files · 21 tests
-│   ├── security/         13 files · 15 tests
+│   ├── contract/         1 file · 994 tests
+│   ├── positive/         1 file · 142 tests
+│   ├── negative/         1 file · 852 tests
+│   ├── boundary/         1 file · 142 tests
+│   ├── authentication/   3 files · 286 tests
+│   ├── authorization/    10 files · 366 tests
+│   ├── security/         3 files · 499 tests
+│   ├── performance/      1 file · 213 tests
+│   ├── data-integrity/   3 files · 5 tests
+│   ├── business-rules/   6 files · 33 tests
+│   ├── e2e/              4 files · 31 tests
 │   ├── coverage/         1 file · 6 tests
 │   └── support/
 │
-├── admin-api/            KPost Admin · 18 files · 330 tests
+├── admin-api/            KPost Admin · 25 files · 1,962 tests
 │   ├── smoke/            1 file · 5 tests
 │   ├── sanity/           1 file · 220 tests
-│   ├── engine/           2 files · 58 tests
-│   ├── flows/            3 files · 8 tests
-│   ├── validation/       5 files · 20 tests
-│   ├── security/         3 files · 15 tests
-│   ├── performance/      1 file · 2 tests
+│   ├── contract/         1 file · 476 tests
+│   ├── positive/         1 file · 68 tests
+│   ├── negative/         3 files · 412 tests
+│   ├── boundary/         2 files · 72 tests
+│   ├── authentication/   1 file · 136 tests
+│   ├── authorization/    4 files · 185 tests
+│   ├── security/         2 files · 244 tests
+│   ├── performance/      2 files · 104 tests
+│   ├── business-rules/   2 files · 10 tests
+│   ├── e2e/              3 files · 28 tests
 │   ├── maintenance/      2 files · 2 tests
 │   └── support/
 │
@@ -104,48 +123,67 @@ tests/
 
 ## KPost API — `tests/kpost-api/`
 
-144 test files, 15,557 tests.
+223 test files, 15,557 tests.
 
-| Type                                     | What it proves                                                                                                 | Files |         Tests | Modules (files)                                                                                                                                                                  |
-| ---------------------------------------- | -------------------------------------------------------------------------------------------------------------- | ----: | ------------: | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| [`smoke/`](kpost-api/smoke/)             | Is the product up and usable? A few minutes, run first.                                                        |     1 |            23 | —                                                                                                                                                                                |
-| [`sanity/`](kpost-api/sanity/)           | Every main read/screen once, after a deploy.                                                                   |     1 |         2,138 | —                                                                                                                                                                                |
-| [`engine/`](kpost-api/engine/)           | Every endpoint × every validator: contract and schema, happy path, negative inputs, auth, security probes.     |    29 |        12,990 | aws (1), common (5), contacts (2), dashboard (1), group (1), kall (2), katchup (4), kbooking (2), kdiary (2), knews (1), profile (4), settings (2), signup-login (2)             |
-| [`flows/`](kpost-api/flows/)             | Lifecycles and workflows: create → read → update → delete, across accounts.                                    |    45 |           185 | admin (2), aws (1), common (5), contacts (4), dashboard (1), group (1), kall (3), katchup (12), kbooking (1), kdiary (2), knews (1), profile (6), settings (3), signup-login (3) |
-| [`validation/`](kpost-api/validation/)   | Business and input rules beyond the engine: bad input refused, valid input accepted.                           |    16 |            59 | aws (1), common (2), contacts (1), group (1), kall (1), katchup (2), kbooking (1), kdiary (1), knews (1), profile (1), settings (1), signup-login (3)                            |
-| [`security/`](kpost-api/security/)       | Authorization: IDOR, cross-user and cross-tenant access, sessions, data exposure.                              |    37 |            88 | admin (3), aws (1), contacts (2), group (1), kall (4), katchup (8), kbooking (1), kdiary (2), knews (1), platform (5), profile (4), settings (1), signup-login (4)               |
-| [`coverage/`](kpost-api/coverage/)       | No HTTP: every documented endpoint is defined, routed and owned.                                               |    13 |            72 | —                                                                                                                                                                                |
-| [`maintenance/`](kpost-api/maintenance/) | QA data cleanup and one-time setup (self-cleaning).                                                            |     2 |             2 | —                                                                                                                                                                                |
-| [`excluded/`](kpost-api/excluded/)       | Out of scope by owner decision (KDoc/KOS, concurrency). Never collected: `testIgnore` in playwright.config.ts. |     6 | not collected | concurrency (1), kdoc (5)                                                                                                                                                        |
+| Type                                           | What it proves                                                                                                                          | Files |         Tests | Modules (files)                                                                                                                                                                               |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----: | ------------: | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| [`smoke/`](kpost-api/smoke/)                   | Is the product up and usable? A few minutes, run first.                                                                                 |     1 |            23 | —                                                                                                                                                                                             |
+| [`sanity/`](kpost-api/sanity/)                 | Every main read/screen once, after a deploy.                                                                                            |     1 |         2,138 | —                                                                                                                                                                                             |
+| [`contract/`](kpost-api/contract/)             | Contract and schema: status code, response structure and schema, headers, content type and field formats match the documented contract. |    13 |         3,710 | aws (1), common (1), contacts (1), dashboard (1), group (1), kall (1), katchup (1), kbooking (1), kdiary (1), knews (1), profile (1), settings (1), signup-login (1)                          |
+| [`positive/`](kpost-api/positive/)             | Positive: the documented request, with a valid login, gets its documented answer (the happy path).                                      |    16 |           535 | aws (1), common (1), contacts (1), dashboard (1), group (1), kall (1), katchup (3), kbooking (1), kdiary (1), knews (1), profile (1), settings (1), signup-login (2)                          |
+| [`negative/`](kpost-api/negative/)             | Negative: missing, null, empty, wrong-type, malformed and unknown input is refused cleanly (4xx, never 5xx).                            |    14 |         3,185 | aws (1), common (2), contacts (1), dashboard (1), group (1), kall (1), katchup (1), kbooking (1), kdiary (1), knews (1), profile (1), settings (1), signup-login (1)                          |
+| [`boundary/`](kpost-api/boundary/)             | Boundary values: just outside a field's limit is refused, exactly at the limit is accepted.                                             |    13 |           530 | aws (1), common (1), contacts (1), dashboard (1), group (1), kall (1), katchup (1), kbooking (1), kdiary (1), knews (1), profile (1), settings (1), signup-login (1)                          |
+| [`authentication/`](kpost-api/authentication/) | Authentication: no token, a forged, expired or malformed token is refused; sessions end when they should.                               |    18 |         1,077 | aws (1), common (1), contacts (1), dashboard (1), group (1), kall (1), katchup (1), kbooking (1), kdiary (1), knews (1), platform (1), profile (1), settings (1), signup-login (5)            |
+| [`authorization/`](kpost-api/authorization/)   | Authorization: roles and object-level access; no IDOR, cross-user or cross-tenant reach into another account's data.                    |    41 |         1,395 | admin (3), aws (2), common (1), contacts (2), dashboard (1), group (2), kall (5), katchup (8), kbooking (2), kdiary (3), knews (2), platform (3), profile (3), settings (2), signup-login (2) |
+| [`security/`](kpost-api/security/)             | Security: injection, XSS, JWT handling, CORS, security headers, sensitive-data exposure, rate limits.                                   |    18 |         1,862 | aws (1), common (1), contacts (2), dashboard (1), group (1), kall (1), katchup (2), kbooking (1), kdiary (1), knews (1), platform (1), profile (3), settings (1), signup-login (1)            |
+| [`performance/`](kpost-api/performance/)       | Performance: per-request response time, payload size and timeouts.                                                                      |    13 |           795 | aws (1), common (1), contacts (1), dashboard (1), group (1), kall (1), katchup (1), kbooking (1), kdiary (1), knews (1), profile (1), settings (1), signup-login (1)                          |
+| [`data-integrity/`](kpost-api/data-integrity/) | Data integrity: what the API says it stored is what the database holds, and bytes survive a round trip.                                 |    14 |            46 | contacts (1), kall (1), katchup (3), profile (4), settings (3), signup-login (2)                                                                                                              |
+| [`business-rules/`](kpost-api/business-rules/) | Business rules: the product's own rules, checked by their end result in every party's view.                                             |    21 |            95 | aws (1), common (4), contacts (3), dashboard (1), group (1), kall (2), katchup (3), kbooking (1), kdiary (1), knews (1), profile (1), settings (1), signup-login (1)                          |
+| [`e2e/`](kpost-api/e2e/)                       | End to end: a lifecycle (create → read → update → delete), across accounts.                                                             |    20 |            77 | admin (2), aws (1), common (1), contacts (1), group (1), kall (1), katchup (6), kbooking (1), kdiary (1), knews (1), profile (2), settings (1), signup-login (1)                              |
+| [`coverage/`](kpost-api/coverage/)             | No HTTP: every documented endpoint is defined, routed and owned.                                                                        |    18 |            87 | —                                                                                                                                                                                             |
+| [`maintenance/`](kpost-api/maintenance/)       | QA data cleanup and one-time setup (self-cleaning).                                                                                     |     2 |             2 | —                                                                                                                                                                                             |
+| [`excluded/`](kpost-api/excluded/)             | Out of scope by owner decision (KDoc/KOS, concurrency). Never collected: `testIgnore` in playwright.config.ts.                          |     6 | not collected | concurrency (1), kdoc (5)                                                                                                                                                                     |
 
 ## KMail API — `tests/kmail-api/`
 
-30 test files, 2,837 tests.
+37 test files, 4,188 tests.
 
-| Type                                   | What it proves                                                                                             | Files | Tests | Modules (files) |
-| -------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----: | ----: | --------------- |
-| [`smoke/`](kmail-api/smoke/)           | Is the product up and usable? A few minutes, run first.                                                    |     1 |     3 | —               |
-| [`sanity/`](kmail-api/sanity/)         | Every main read/screen once, after a deploy.                                                               |     1 |   616 | —               |
-| [`engine/`](kmail-api/engine/)         | Every endpoint × every validator: contract and schema, happy path, negative inputs, auth, security probes. |     2 | 2,129 | —               |
-| [`flows/`](kmail-api/flows/)           | Lifecycles and workflows: create → read → update → delete, across accounts.                                |     8 |    47 | —               |
-| [`validation/`](kmail-api/validation/) | Business and input rules beyond the engine: bad input refused, valid input accepted.                       |     4 |    21 | —               |
-| [`security/`](kmail-api/security/)     | Authorization: IDOR, cross-user and cross-tenant access, sessions, data exposure.                          |    13 |    15 | —               |
-| [`coverage/`](kmail-api/coverage/)     | No HTTP: every documented endpoint is defined, routed and owned.                                           |     1 |     6 | —               |
+| Type                                           | What it proves                                                                                                                          | Files | Tests | Modules (files) |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----: | ----: | --------------- |
+| [`smoke/`](kmail-api/smoke/)                   | Is the product up and usable? A few minutes, run first.                                                                                 |     1 |     3 | —               |
+| [`sanity/`](kmail-api/sanity/)                 | Every main read/screen once, after a deploy.                                                                                            |     1 |   616 | —               |
+| [`contract/`](kmail-api/contract/)             | Contract and schema: status code, response structure and schema, headers, content type and field formats match the documented contract. |     1 |   994 | —               |
+| [`positive/`](kmail-api/positive/)             | Positive: the documented request, with a valid login, gets its documented answer (the happy path).                                      |     1 |   142 | —               |
+| [`negative/`](kmail-api/negative/)             | Negative: missing, null, empty, wrong-type, malformed and unknown input is refused cleanly (4xx, never 5xx).                            |     1 |   852 | —               |
+| [`boundary/`](kmail-api/boundary/)             | Boundary values: just outside a field's limit is refused, exactly at the limit is accepted.                                             |     1 |   142 | —               |
+| [`authentication/`](kmail-api/authentication/) | Authentication: no token, a forged, expired or malformed token is refused; sessions end when they should.                               |     3 |   286 | —               |
+| [`authorization/`](kmail-api/authorization/)   | Authorization: roles and object-level access; no IDOR, cross-user or cross-tenant reach into another account's data.                    |    10 |   366 | —               |
+| [`security/`](kmail-api/security/)             | Security: injection, XSS, JWT handling, CORS, security headers, sensitive-data exposure, rate limits.                                   |     3 |   499 | —               |
+| [`performance/`](kmail-api/performance/)       | Performance: per-request response time, payload size and timeouts.                                                                      |     1 |   213 | —               |
+| [`data-integrity/`](kmail-api/data-integrity/) | Data integrity: what the API says it stored is what the database holds, and bytes survive a round trip.                                 |     3 |     5 | —               |
+| [`business-rules/`](kmail-api/business-rules/) | Business rules: the product's own rules, checked by their end result in every party's view.                                             |     6 |    33 | —               |
+| [`e2e/`](kmail-api/e2e/)                       | End to end: a lifecycle (create → read → update → delete), across accounts.                                                             |     4 |    31 | —               |
+| [`coverage/`](kmail-api/coverage/)             | No HTTP: every documented endpoint is defined, routed and owned.                                                                        |     1 |     6 | —               |
 
 ## KPost Admin — `tests/admin-api/`
 
-18 test files, 330 tests.
+25 test files, 1,962 tests.
 
-| Type                                     | What it proves                                                                                             | Files | Tests | Modules (files) |
-| ---------------------------------------- | ---------------------------------------------------------------------------------------------------------- | ----: | ----: | --------------- |
-| [`smoke/`](admin-api/smoke/)             | Is the product up and usable? A few minutes, run first.                                                    |     1 |     5 | —               |
-| [`sanity/`](admin-api/sanity/)           | Every main read/screen once, after a deploy.                                                               |     1 |   220 | —               |
-| [`engine/`](admin-api/engine/)           | Every endpoint × every validator: contract and schema, happy path, negative inputs, auth, security probes. |     2 |    58 | —               |
-| [`flows/`](admin-api/flows/)             | Lifecycles and workflows: create → read → update → delete, across accounts.                                |     3 |     8 | —               |
-| [`validation/`](admin-api/validation/)   | Business and input rules beyond the engine: bad input refused, valid input accepted.                       |     5 |    20 | —               |
-| [`security/`](admin-api/security/)       | Authorization: IDOR, cross-user and cross-tenant access, sessions, data exposure.                          |     3 |    15 | —               |
-| [`performance/`](admin-api/performance/) | Per-request response time against the thresholds.                                                          |     1 |     2 | —               |
-| [`maintenance/`](admin-api/maintenance/) | QA data cleanup and one-time setup (self-cleaning).                                                        |     2 |     2 | —               |
+| Type                                           | What it proves                                                                                                                          | Files | Tests | Modules (files) |
+| ---------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------- | ----: | ----: | --------------- |
+| [`smoke/`](admin-api/smoke/)                   | Is the product up and usable? A few minutes, run first.                                                                                 |     1 |     5 | —               |
+| [`sanity/`](admin-api/sanity/)                 | Every main read/screen once, after a deploy.                                                                                            |     1 |   220 | —               |
+| [`contract/`](admin-api/contract/)             | Contract and schema: status code, response structure and schema, headers, content type and field formats match the documented contract. |     1 |   476 | —               |
+| [`positive/`](admin-api/positive/)             | Positive: the documented request, with a valid login, gets its documented answer (the happy path).                                      |     1 |    68 | —               |
+| [`negative/`](admin-api/negative/)             | Negative: missing, null, empty, wrong-type, malformed and unknown input is refused cleanly (4xx, never 5xx).                            |     3 |   412 | —               |
+| [`boundary/`](admin-api/boundary/)             | Boundary values: just outside a field's limit is refused, exactly at the limit is accepted.                                             |     2 |    72 | —               |
+| [`authentication/`](admin-api/authentication/) | Authentication: no token, a forged, expired or malformed token is refused; sessions end when they should.                               |     1 |   136 | —               |
+| [`authorization/`](admin-api/authorization/)   | Authorization: roles and object-level access; no IDOR, cross-user or cross-tenant reach into another account's data.                    |     4 |   185 | —               |
+| [`security/`](admin-api/security/)             | Security: injection, XSS, JWT handling, CORS, security headers, sensitive-data exposure, rate limits.                                   |     2 |   244 | —               |
+| [`performance/`](admin-api/performance/)       | Performance: per-request response time, payload size and timeouts.                                                                      |     2 |   104 | —               |
+| [`business-rules/`](admin-api/business-rules/) | Business rules: the product's own rules, checked by their end result in every party's view.                                             |     2 |    10 | —               |
+| [`e2e/`](admin-api/e2e/)                       | End to end: a lifecycle (create → read → update → delete), across accounts.                                                             |     3 |    28 | —               |
+| [`maintenance/`](admin-api/maintenance/)       | QA data cleanup and one-time setup (self-cleaning).                                                                                     |     2 |     2 | —               |
 
 ## KPost UI — `tests/kpost-ui/`
 
@@ -196,13 +234,13 @@ tests/
 
 ## The bench's own self-tests — `tests/framework/`
 
-62 files, 441 tests. No KPost server is called; `npm run framework`.
+64 files, 464 tests. No KPost server is called; `npm run framework`.
 
 | Area                                     | What it checks                                                   | Files | Tests |
 | ---------------------------------------- | ---------------------------------------------------------------- | ----: | ----: |
 | [`bug-tracker/`](framework/bug-tracker/) | Bug filing: candidates, gates, dedupe, ticket text, status pass. |    16 |   154 |
 | [`validators/`](framework/validators/)   | Each centralized validator against fixed replies.                |     8 |    88 |
-| [`engine/`](framework/engine/)           | The validation engine, sweeps, flow findings, token handling.    |     8 |    44 |
+| [`engine/`](framework/engine/)           | The validation engine, sweeps, flow findings, token handling.    |    10 |    67 |
 | [`contracts/`](framework/contracts/)     | Source contracts, input limits, types and payload audit.         |     5 |    27 |
 | [`coverage/`](framework/coverage/)       | Coverage ledgers: endpoints, screens, UI rules, FRD, skips.      |     7 |    13 |
 | [`safety/`](framework/safety/)           | Live-system guards: Admin DB, uploads, secrets, raw bodies.      |     5 |    56 |
@@ -226,4 +264,4 @@ tests/
 add `"<new path>": "<old path>"` to `src/bug-tracker/findings/ui-spec-renames.json` so its bugs keep
 their tags (`uiFingerprintPath`). Run tests through the product commands in `docs/guides/commands.md`.
 
-<!-- inventory-files: {"admin-api/engine":2,"admin-api/flows":3,"admin-api/maintenance":2,"admin-api/performance":1,"admin-api/sanity":1,"admin-api/security":3,"admin-api/smoke":1,"admin-api/validation":5,"admin-ui/cross-layer":1,"admin-ui/e2e":4,"admin-ui/functional":1,"admin-ui/sanity":1,"admin-ui/screens":3,"admin-ui/security":1,"admin-ui/smoke":1,"kmail-api/coverage":1,"kmail-api/engine":2,"kmail-api/flows":8,"kmail-api/sanity":1,"kmail-api/security":13,"kmail-api/smoke":1,"kmail-api/validation":4,"kpost-api/coverage":13,"kpost-api/engine":29,"kpost-api/excluded":6,"kpost-api/flows":45,"kpost-api/maintenance":2,"kpost-api/sanity":1,"kpost-api/security":37,"kpost-api/smoke":1,"kpost-api/validation":16,"kpost-mobile/e2e":28,"kpost-mobile/screens":2,"kpost-mobile/validation":6,"kpost-ui/accessibility":13,"kpost-ui/api-handling":19,"kpost-ui/cross-layer":2,"kpost-ui/e2e":53,"kpost-ui/excluded":4,"kpost-ui/functional":44,"kpost-ui/journeys":10,"kpost-ui/performance":1,"kpost-ui/resilience":8,"kpost-ui/responsive":2,"kpost-ui/sanity":2,"kpost-ui/screens":31,"kpost-ui/security":17,"kpost-ui/smoke":9,"kpost-ui/validation":26,"kpost-ui/visual":2} -->
+<!-- inventory-files: {"admin-api/authentication":1,"admin-api/authorization":4,"admin-api/boundary":2,"admin-api/business-rules":2,"admin-api/contract":1,"admin-api/e2e":3,"admin-api/maintenance":2,"admin-api/negative":3,"admin-api/performance":2,"admin-api/positive":1,"admin-api/sanity":1,"admin-api/security":2,"admin-api/smoke":1,"admin-ui/cross-layer":1,"admin-ui/e2e":4,"admin-ui/functional":1,"admin-ui/sanity":1,"admin-ui/screens":3,"admin-ui/security":1,"admin-ui/smoke":1,"kmail-api/authentication":3,"kmail-api/authorization":10,"kmail-api/boundary":1,"kmail-api/business-rules":6,"kmail-api/contract":1,"kmail-api/coverage":1,"kmail-api/data-integrity":3,"kmail-api/e2e":4,"kmail-api/negative":1,"kmail-api/performance":1,"kmail-api/positive":1,"kmail-api/sanity":1,"kmail-api/security":3,"kmail-api/smoke":1,"kpost-api/authentication":18,"kpost-api/authorization":41,"kpost-api/boundary":13,"kpost-api/business-rules":21,"kpost-api/contract":13,"kpost-api/coverage":18,"kpost-api/data-integrity":14,"kpost-api/e2e":20,"kpost-api/excluded":6,"kpost-api/maintenance":2,"kpost-api/negative":14,"kpost-api/performance":13,"kpost-api/positive":16,"kpost-api/sanity":1,"kpost-api/security":18,"kpost-api/smoke":1,"kpost-mobile/e2e":28,"kpost-mobile/screens":2,"kpost-mobile/validation":6,"kpost-ui/accessibility":13,"kpost-ui/api-handling":19,"kpost-ui/cross-layer":2,"kpost-ui/e2e":53,"kpost-ui/excluded":4,"kpost-ui/functional":44,"kpost-ui/journeys":10,"kpost-ui/performance":1,"kpost-ui/resilience":8,"kpost-ui/responsive":2,"kpost-ui/sanity":2,"kpost-ui/screens":31,"kpost-ui/security":17,"kpost-ui/smoke":9,"kpost-ui/validation":26,"kpost-ui/visual":2} -->

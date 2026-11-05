@@ -19,7 +19,7 @@ export function fieldLimits(s: JsonSchema) {
 
 /**
  * Text filler: distinctive, so a value a write endpoint stored can be found and removed afterwards
- * (`tests/kpost-api/maintenance/boundary-filler-cleanup.spec.ts`).
+ * (`tests/kpost-api/maintenance/boundary-filler-maintenance.spec.ts`).
  */
 export const FILLER_TEXT = 'qaboundary';
 

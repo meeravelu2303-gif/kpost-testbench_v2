@@ -87,7 +87,7 @@ src/config/             env (zod, all flags + defaults), api, auth profiles, dat
 src/api/                client (pool, request builder, token provider) · registry · schema (validation) · contract (workbook, type codes) · definitions/<product>/<module>/*.api.ts
 src/validation-engine/  engine · policy (profiles) · endpoint-cases.ts (one test per endpoint×validator) · flow-finding · production guard
 src/validators/         centralized validators (auth, authz, request, response, security, performance, concurrency, common)
-src/business-rules/     business-rule registry (KPost's rules are asserted in the module feature specs)
+src/business-rules/     business-rule registry (KPost's rules: the business-rules/ and e2e/ specs)
 src/database/           MySQL / disabled adapters, per-suite pool, repositories, named DB validations
 src/bug-tracker/        failed test → Bugzilla bug, one folder per step: findings/ (candidate, fingerprint) · gates/
                         (validity gate, known false positives) · ticket/ (bug text) · bugzilla/ (client, filer) ·
@@ -99,11 +99,16 @@ tests/ — tests/<product>/<type>/[<module>/]<file> (since 2026-11-05). Declared
   enforced by tests/framework/layout/test-layout.spec.ts; tests/README.md (`npm run tests:inventory`) shows the
   products, types, files and test counts. Every product has smoke/ and sanity/; excluded/ = out of scope
   (KDoc/KOS, concurrency), never collected (`testIgnore`, on top of the grep-invert).
-  kpost-api/            smoke sanity engine/<module> flows/<module> validation/<module> security/<module>
-                        coverage maintenance excluded/{kdoc,concurrency}. Files <module>-<what>.spec.ts;
-                        cross-module checks in platform/. engine = every endpoint × every validator (contract,
-                        happy path, negative inputs, auth); flows/<module>/<module>-feature.spec.ts = the lifecycle.
-  kmail-api/ admin-api/ the same types, flat (no module folder); admin-api adds performance/ maintenance/.
+  kpost-api/<type>/<module>/<module>-<what>-<type>.spec.ts (since 2026-11-05, second pass): smoke sanity, then
+                        one folder per test type — contract positive negative boundary authentication
+                        authorization security performance data-integrity business-rules — then e2e (the
+                        lifecycles, <module>-lifecycle-e2e.spec.ts) coverage maintenance excluded/{kdoc,concurrency}.
+                        Cross-module checks in platform/. Each type folder holds the engine's checks of that type
+                        (<module>-endpoints-<type>.spec.ts, one line: describeEndpointChecks; which endpoints:
+                        src/validation-engine/endpoint-groups.ts; which check is which type: check-types.ts) beside
+                        the hand-written specs of the same kind. The engine still runs each endpoint ONCE per run:
+                        the type files share that run (src/validation-engine/shared-run.ts), so no extra requests.
+  kmail-api/ admin-api/ the same types, flat (no module folder); every file starts kmail-/admin-.
   kpost-ui/<type>/<module>/<module>-<area>-<type>.spec.ts: e2e (multi-step flow that writes data), functional
                         (one screen, read-only or local state), screens (render/health/layout sweeps), validation
                         (invalid input refused AND valid input accepted), api-handling (server errors shown to the
@@ -142,7 +147,7 @@ LIVE AWS S3 bucket: no file over `UPLOAD_MAX_BYTES`, 64 KB, leaves the API clien
 browser; `src/validation-engine/upload-guard.ts`; prove a size rule by stub or source, never a big file). Forgot-password and the profile's
 device/deactivation OTP senders text a real phone even with the OTP bypass, so they stay blocked; account
 actions that would damage a QA account (devices, password, access code, deactivate) run only on a throwaway
-`apiflowkpost<N>` account (`tests/kpost-api/flows/profile/profile-throwaway-account.spec.ts`), deleted afterwards.
+`apiflowkpost<N>` account (`tests/kpost-api/e2e/profile/profile-throwaway-account-e2e.spec.ts`), deleted afterwards.
 
 ## 4. The run → Bugzilla flow (one command per product)
 
@@ -267,7 +272,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   with a known-good token before writing it into Bugzilla.
 - **Cross-tenant "fixed" needs an owner control**: the owner's identical call must succeed while the
   stranger's fails, or the 4xx proves nothing.
-- **Flow-triggered bugs (`flow.server-error`) and business rules inside `flows/<module>-feature.spec.ts`** are not reachable
+- **Flow-triggered bugs (`flow.server-error`) and business rules inside `e2e/<module>/<module>-lifecycle-e2e.spec.ts`** are not reachable
   by `--grep "[endpoint-id]"`; re-test them by running the lifecycle flow with its `*_LIFECYCLE` flag.
 - **Test a matcher against real Bugzilla data**, not hand-written fixtures. Browser-filter counts use
   substring match on the whiteboard (`[browser:chromium,firefox]` counts for both).
@@ -299,7 +304,7 @@ the browsers in their `[browser:…]` whiteboard tag. Full spec: `docs/guides/bu
   each cited (an enforced annotation, a hand-written check, or the saved column's width; strict SQL mode), written into
   the request schemas at resolve time for `request.boundary-value` (just outside → 4xx) and `request.boundary-accept`
   (exactly at → no 5xx; never on `global`/OTP endpoints; re-sends the normal request after). Their text filler is
-  `qaboundary…`; `tests/kpost-api/maintenance/boundary-filler-cleanup.spec.ts` removes what create endpoints stored.
+  `qaboundary…`; `tests/kpost-api/maintenance/boundary-filler-maintenance.spec.ts` removes what create endpoints stored.
 - **Only POST and GET exist.** Documented payload = POST, none = GET; every derived method records its source.
 - **Never invent a contract or a payload value.** Send what the real frontend sends; `payload-audit.spec.ts`
   enforces it. Admin save endpoints take a JSON array; update takes an object.

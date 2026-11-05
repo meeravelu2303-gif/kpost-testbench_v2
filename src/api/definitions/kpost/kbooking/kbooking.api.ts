@@ -133,9 +133,9 @@ export const blockTicketApi = defineKBookingEndpoint({
   destructive: true,
   // Places a real hold on third-party bus inventory, so it is gated. KBook.js:845-867.
   productionSafe: false,
-  // Always skipped in feature.spec.ts: the seat hold may not be a true sandbox. Do not add an env
+  // Always skipped in kbooking-bus-search-e2e.spec.ts: the seat hold may not be a true sandbox. Do not add an env
   // flag for it without the owner's authorization.
-  note: 'WRITTEN, EXECUTION BLOCKED pending explicit owner authorization — real third-party seat hold, unconfirmed sandbox (see feature.spec.ts)',
+  note: 'WRITTEN, EXECUTION BLOCKED pending explicit owner authorization — real third-party seat hold, unconfirmed sandbox (see kbooking-bus-search-e2e.spec.ts)',
   // Body plus a path param, so an inline factory. `kpostId` is the caller's own id (KBook.js:867).
   pathParamsSchema: pathParamSchema('kpostId'),
   request: () => ({

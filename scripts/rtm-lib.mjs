@@ -192,9 +192,8 @@ export async function generateRtm({ report, root }) {
     });
   }
 
-  // contract-matrix generators are non-functional by path (not annotated in source).
-  for (const t of inScope)
-    if (/src\/validation-engine\/(endpoint-cases|contract-suite)/.test(t.file)) t.nfr = true;
+  // The engine's generated checks are non-functional by path (not annotated in source).
+  for (const t of inScope) if (/src\/validation-engine\/endpoint-cases/.test(t.file)) t.nfr = true;
 
   // index: concrete req id -> linked in-scope tests
   const linkIndex = new Map();

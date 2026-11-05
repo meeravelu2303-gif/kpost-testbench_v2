@@ -37,7 +37,7 @@ export const userProfileByKpostIdApi = defineProfileEndpoint({
   tags: [...READ_TAGS, 'pii', 'enumeration-surface'],
   productionSafe: true,
   // Looks up the second personal account: the primary one gets a wrong 404 here (pinned in
-  // directory-lookup.spec.ts), and the probes need an account that resolves.
+  // profile-directory-lookup-data-integrity.spec.ts), and the probes need an account that resolves.
   request: body(() => ({ kpostID: testData.personal3KpostId })),
 });
 

@@ -59,7 +59,10 @@ src/
 │   ├── endpoint-executor.ts      # sends requests, credentials, setup calls
 │   ├── probe.ts                  # the single "send probe + assert status" implementation
 │   ├── production-guard.ts       # destructive-in-production protection
-│   └── contract-suite.ts         # generates one Playwright test per endpoint
+│   ├── endpoint-cases.ts         # one Playwright test per endpoint × check (optionally one type's)
+│   ├── check-types.ts            # which test type (folder) each check is reported under
+│   ├── endpoint-groups.ts        # WHICH endpoints each module sweeps · describeEndpointChecks()
+│   └── shared-run.ts             # one engine run per endpoint, shared by every type folder
 ├── validators/
 │   ├── authentication/           # valid · missing · invalid · expired · malformed (+empty, bad Bearer)
 │   ├── authorization/            # role · permission · forbidden · cross-resource · privilege-escalation
@@ -72,7 +75,7 @@ src/
 │   ├── performance/              # response-time · timeout · payload-size
 │   ├── common/                   # id · email · date · url · boolean · common-error
 │   └── index.ts                  # ← THE registration point
-├── business-rules/               # business-rule.ts · index.ts (the registry; KPost's rules live in module feature specs)
+├── business-rules/               # business-rule.ts · index.ts (the registry; KPost's rules live in the business-rules/ and e2e/ specs)
 ├── database/                     # database-client · database-pool · repositories/ · kpost-assertions · validations/
 ├── bug-tracker/                  # candidate · validity gate · fingerprint · dedupe · Bugzilla filer/client · verify-resolve
 ├── reporting/                    # bugzilla-reporter (writes the single REPORT.md/json + files bugs) · run-summary · bug-report · report-formatter · report-attachment
@@ -85,19 +88,19 @@ tests/kpost-api · tests/kmail-api · tests/admin-api · tests/kpost-ui · tests
 
 ## 2. What each folder is for
 
-| Folder               | Responsibility                                                                                       | Contains business logic? |
-| -------------------- | ---------------------------------------------------------------------------------------------------- | ------------------------ |
-| `config/`            | Every URL, credential source, threshold, header rule and error code. Nothing is hard-coded in tests. | No                       |
-| `api/client/`        | HTTP: builds requests, adds credentials and correlation IDs, measures time, never throws on status.  | No                       |
-| `api/registry/`      | Endpoint catalogue and its type.                                                                     | No                       |
-| `api/contract/`      | Looks a definition's request/response schemas and examples up in the generated OpenAPI.              | No                       |
-| `api/definitions/`   | **One definition per endpoint.** Only endpoint facts.                                                | No                       |
-| `validation-engine/` | Decides which validators run, runs them, handles dependencies, aggregates results.                   | No                       |
-| `validators/`        | **Reusable technical validation.** Each validator is implemented once.                               | **No, never**            |
-| `business-rules/`    | The registry for definition-level rules. KPost's rules are asserted in module feature specs.         | **Yes (only here)**      |
-| `database/`          | DB access (client → repositories) and endpoint-specific persistence checks.                          | Persistence checks only  |
-| `bug-tracker/`       | Turns failures into deduplicated, validity-gated Bugzilla tickets routed to the module's owner.      | No                       |
-| `reporting/`         | The single run report (`reports/REPORT.md/json`) and the Playwright reporter that files bugs.        | No                       |
+| Folder               | Responsibility                                                                                             | Contains business logic? |
+| -------------------- | ---------------------------------------------------------------------------------------------------------- | ------------------------ |
+| `config/`            | Every URL, credential source, threshold, header rule and error code. Nothing is hard-coded in tests.       | No                       |
+| `api/client/`        | HTTP: builds requests, adds credentials and correlation IDs, measures time, never throws on status.        | No                       |
+| `api/registry/`      | Endpoint catalogue and its type.                                                                           | No                       |
+| `api/contract/`      | Looks a definition's request/response schemas and examples up in the generated OpenAPI.                    | No                       |
+| `api/definitions/`   | **One definition per endpoint.** Only endpoint facts.                                                      | No                       |
+| `validation-engine/` | Decides which validators run, runs them, handles dependencies, aggregates results.                         | No                       |
+| `validators/`        | **Reusable technical validation.** Each validator is implemented once.                                     | **No, never**            |
+| `business-rules/`    | The registry for definition-level rules. KPost's rules are asserted in the business-rules/ and e2e/ specs. | **Yes (only here)**      |
+| `database/`          | DB access (client → repositories) and endpoint-specific persistence checks.                                | Persistence checks only  |
+| `bug-tracker/`       | Turns failures into deduplicated, validity-gated Bugzilla tickets routed to the module's owner.            | No                       |
+| `reporting/`         | The single run report (`reports/REPORT.md/json`) and the Playwright reporter that files bugs.              | No                       |
 
 ## 3. Central validator architecture
 
@@ -356,29 +359,43 @@ policy, and its request/response schemas are looked up from the workbook contrac
 
 Where a valid request needs a value only the product can mint (a message id, a document id), the
 definition says so — `tags: ['needs-id']` and a `note:` — and the endpoint is driven by a lifecycle
-flow in the module's `feature.spec.ts` instead of standalone. `homeDashboardNewMsgs` in the same
+flow in the module's `<module>-lifecycle-e2e.spec.ts` instead of standalone. `homeDashboardNewMsgs` in the same
 file is the example: with null markers the backend 500s, which would read as a false CRITICAL.
 
 ## 12. Example test using the generic engine
 
-[`tests/kpost-api/engine/dashboard/dashboard-reads.spec.ts`](../../tests/kpost-api/engine/dashboard/dashboard-reads.spec.ts). This is the entire file:
+[`tests/kpost-api/negative/dashboard/dashboard-endpoints-negative.spec.ts`](../../tests/kpost-api/negative/dashboard/dashboard-endpoints-negative.spec.ts). This is the entire file:
 
 ```ts
-import { describeEndpointCases } from '@engine/endpoint-cases';
-import { test } from '@fixtures';
+import { describeEndpointChecks } from '@engine/endpoint-groups';
 
-test.describe('KPost Dashboard · reads', () => {
-  describeEndpointCases({ tags: ['dashboard-read'] });
-});
+describeEndpointChecks('kpost-api', 'dashboard', 'negative');
 ```
 
-`describeEndpointCases` creates **one Playwright test per endpoint × validator**, so a run reads
-like a test plan (`response.status-code — …`, `security.injection — …`), each tagged
-`@api @kpost-api @dashboard @dashboard-read`. The engine still sends each endpoint's requests once;
-every case asserts its own slice of that one report. `describeEndpointContracts`
-(`@engine/contract-suite`) is the coarser form — one test per endpoint — used by the KMail and
-Admin root wrappers. Write endpoints go through `forWriteSweep` (`src/api/sweep-target.ts`), which
-points "the other party" at the sacrificial qatest account.
+`describeEndpointChecks` creates **one Playwright test per endpoint × check of that type**, for the
+endpoints the module's groups name in `src/validation-engine/endpoint-groups.ts`
+(`{ tags: ['dashboard-read'] }`; write groups add `{ transform: forWriteSweep }`, which points "the
+other party" at the sacrificial qatest account). So a run reads like a test plan, one folder per type:
+
+| Folder            | Checks (`src/validation-engine/check-types.ts`)                                       |
+| ----------------- | ------------------------------------------------------------------------------------- |
+| `contract/`       | `response.*` (structure, schema, headers, content type, …) and `common.*` formats     |
+| `positive/`       | `response.status-code` (the happy path) and `authentication.valid-token`              |
+| `negative/`       | `request.*`: required, null, empty, data type, enum, format, malformed, unknown, …    |
+| `boundary/`       | `request.boundary-value` (just outside a limit) and `request.boundary-accept` (at it) |
+| `authentication/` | `authentication.*`: missing, invalid, expired, malformed token                        |
+| `authorization/`  | `authorization.*`: role, permission, forbidden, cross-resource, privilege escalation  |
+| `security/`       | `security.*`: injection, XSS, JWT, headers, sensitive data, disclosure, rate limit    |
+| `performance/`    | `performance.*`: response time, payload size, timeout                                 |
+| `data-integrity/` | `database.*` validations of the endpoints that declare them                           |
+| `business-rules/` | `business-rule.*` of the endpoints that declare them                                  |
+
+The engine still sends each endpoint's requests **once per run**: the first type file to reach an
+endpoint runs the engine and attaches the report (the Bugzilla filer reads it), and every other type
+file reads that report from `<outputDir>/.engine-runs/<TEST_RUN_ID>/` (`shared-run.ts`). The aggregate
+checks (error format, information disclosure, sensitive data) therefore still see every exchange of
+the run. A new validator must have a type, and a type with checks must have its file:
+`tests/framework/engine/check-types.spec.ts` fails otherwise.
 
 Hand-written tests use the same engine and fixtures:
 
@@ -391,9 +408,9 @@ test('dashboard under the security profile', async ({ validationEngine }) => {
 
 ## 13. Example business rule
 
-KPost's business rules are asserted in the module feature specs, because a real rule needs state
+KPost's business rules are asserted in the hand-written `business-rules/` and `e2e/` specs, because a real rule needs state
 the generic sweep cannot set up (a second account, a created record, a prior step). The pattern,
-from [`tests/kpost-api/flows/kall/kall-feature.spec.ts`](../../tests/kpost-api/flows/kall/kall-feature.spec.ts):
+from [`tests/kpost-api/e2e/kall/kall-lifecycle-e2e.spec.ts`](../../tests/kpost-api/e2e/kall/kall-lifecycle-e2e.spec.ts):
 
 ```ts
 const repeat = await endpoints.sendTo(
@@ -548,12 +565,13 @@ steps. Nothing in the engine, the validators or any other spec changes.
    production guard is default-deny.
 2. **Module index** — `src/api/definitions/kpost/<module>/index.ts` exports the module's definitions
    as one array (`dashboardApis`), and `src/api/definitions/index.ts` spreads it into the registry.
-3. **Wrapper spec** — `tests/kpost-api/<module>/read.spec.ts` (and `write.spec.ts` with
-   `{ transform: forWriteSweep }` for writes): three lines calling `describeEndpointCases` on the
-   module's tag. `tests/framework/engine/sweep-completeness.spec.ts` fails until every new endpoint is
-   reachable by a wrapper or listed as exempt with a reason — a definition cannot be quietly left out
-   of the sweep.
-4. **Feature spec** — `tests/kpost-api/<module>/feature.spec.ts` for anything the sweep cannot do
+3. **Endpoint group** — the module's entry in `src/validation-engine/endpoint-groups.ts` (a tag
+   filter; `{ transform: forWriteSweep }` for writes), and one `<module>-endpoints-<type>.spec.ts` per
+   type folder that has checks for it (`describeEndpointChecks('kpost-api', '<module>', '<type>')`;
+   `check-types.spec.ts` lists the ones missing). `tests/framework/engine/sweep-completeness.spec.ts`
+   fails until every new endpoint is reachable by a group or listed as exempt with a reason — a
+   definition cannot be quietly left out of the sweep.
+4. **Lifecycle spec** — `tests/kpost-api/e2e/<module>/<module>-lifecycle-e2e.spec.ts` for anything the sweep cannot do
    alone: lifecycle flows (create → act → clean up, behind a `<MODULE>_LIFECYCLE` flag), `needs-id`
    endpoints fed real ids, and the module's business rules via `recordBusinessRuleViolation` (§13).
 
@@ -640,4 +658,4 @@ npx playwright test --project=api --grep @critical
 - **Response time is a functional per-request budget, not load testing.** Keep load tests (k6, Artillery, …) separate.
 - **Probe volume** is bounded (`thresholds.request.maxCasesPerValidator`, `security.maxInjectionFields`, `maxRateLimitBurst`). Flooding checks run only in SECURITY/FULL.
 - **Login probes** use a dedicated `login-probe` principal, so negative login attempts never lock real accounts.
-- **Test data cleans itself up.** Writes run inside self-cleaning lifecycle flows (`*_LIFECYCLE` flags, `tests/kpost-api/<module>/feature.spec.ts`), and anything the bench creates that cannot be deleted is recorded in `src/fixtures/created-accounts.json`.
+- **Test data cleans itself up.** Writes run inside self-cleaning lifecycle flows (`*_LIFECYCLE` flags, `tests/kpost-api/e2e/<module>/<module>-lifecycle-e2e.spec.ts`), and anything the bench creates that cannot be deleted is recorded in `src/fixtures/created-accounts.json`.

@@ -6,6 +6,8 @@
  * Adding a product or a test type starts here.
  */
 
+import { CHECK_TYPE_INFO, CHECK_TYPES } from '../validation-engine/check-types.ts';
+
 export interface TestType {
   /** Folder name under the product. */
   readonly dir: string;
@@ -56,34 +58,18 @@ const sanity: TestType = {
   byModule: false,
 };
 
+/**
+ * The API test types. The engine's checks are split over the first ten (`CHECK_TYPES`, one
+ * `<module>-endpoints-<type>.spec.ts` each); hand-written specs of the same kind sit beside them.
+ */
 const apiTypes = (modules: boolean): readonly TestType[] => [
   smoke,
   sanity,
+  ...CHECK_TYPES.map((dir) => ({ dir, holds: CHECK_TYPE_INFO[dir], byModule: modules })),
   {
-    dir: 'engine',
-    holds:
-      'Every endpoint × every validator: contract and schema, happy path, negative inputs, auth, security probes.',
+    dir: 'e2e',
+    holds: 'End to end: a lifecycle (create → read → update → delete), across accounts.',
     byModule: modules,
-  },
-  {
-    dir: 'flows',
-    holds: 'Lifecycles and workflows: create → read → update → delete, across accounts.',
-    byModule: modules,
-  },
-  {
-    dir: 'validation',
-    holds: 'Business and input rules beyond the engine: bad input refused, valid input accepted.',
-    byModule: modules,
-  },
-  {
-    dir: 'security',
-    holds: 'Authorization: IDOR, cross-user and cross-tenant access, sessions, data exposure.',
-    byModule: modules,
-  },
-  {
-    dir: 'performance',
-    holds: 'Per-request response time against the thresholds.',
-    byModule: false,
   },
   {
     dir: 'coverage',

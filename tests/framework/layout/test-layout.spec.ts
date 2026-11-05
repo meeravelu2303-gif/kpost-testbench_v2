@@ -10,8 +10,9 @@ import {
 import { expect, test } from '@fixtures';
 
 /**
- * The folder layout is `tests/<product>/<type>/[<module>/]<file>` (src/config/test-layout.ts). A file in
- * the wrong place fails here, so the tree stays readable and tests/README.md stays true.
+ * The folder layout is `tests/<product>/<type>/[<module>/]<file>` (src/config/test-layout.ts), and a
+ * product spec's name is `<module>-<what>-<type>.spec.ts`. A file in the wrong place or with the wrong
+ * name fails here, so the tree stays readable and tests/README.md stays true.
  */
 const TESTS = path.join(ROOT_DIR, 'tests');
 
@@ -72,14 +73,39 @@ function misplaced(product: TestProduct): string[] {
       !name.endsWith(`-${type.dir}.spec.ts`)
     )
       problems.push(`${file}: a ${type.dir}/ spec is named <module>-<area>-${type.dir}.spec.ts`);
-    if (product.dir === 'kpost-api' && type.byModule && type.kind !== 'excluded') {
-      const moduleDir = parts[1] as string;
-      if (moduleDir !== 'platform' && !name.startsWith(`${moduleDir}-`))
-        problems.push(`${file}: a ${moduleDir}/ spec is named ${moduleDir}-<what>.spec.ts`);
+    if (product.runner === 'playwright-api' && type.kind !== 'excluded') {
+      // API specs end in their type too (`.smoke.spec.ts` for smoke, as the UI smoke files do).
+      const suffix = type.dir === 'smoke' ? '.smoke.spec.ts' : `-${type.dir}.spec.ts`;
+      if (!name.endsWith(suffix))
+        problems.push(`${file}: a ${type.dir}/ spec is named <module>-<what>${suffix}`);
+      // And start with their module: the module folder (KPost API) or the product's own (KMail, Admin).
+      const prefix = type.byModule ? parts[1] : API_FLAT_PREFIX[product.dir];
+      if (prefix && !name.startsWith(`${prefix}-`))
+        problems.push(`${file}: named ${prefix}-<what>${suffix}`);
+    }
+    const module = type.byModule ? parts[1] : API_FLAT_PREFIX[product.dir];
+    const source = fs.readFileSync(path.join(TESTS, file), 'utf8');
+    if (
+      product.runner === 'playwright-api' &&
+      (name === `${module}-endpoints-${type.dir}.spec.ts` ||
+        source.includes('describeEndpointChecks('))
+    ) {
+      // An engine spec names its product, module and type, and they must be where the file sits.
+      const expected = `describeEndpointChecks('${product.dir}', '${module}', '${type.dir}')`;
+      if (name !== `${module}-endpoints-${type.dir}.spec.ts` || !source.includes(expected))
+        problems.push(
+          `${file}: an engine spec is ${module}-endpoints-${type.dir}.spec.ts calling exactly ${expected}`,
+        );
     }
   }
   return problems;
 }
+
+/** Flat API products: every spec starts with the product's module name. */
+const API_FLAT_PREFIX: Readonly<Record<string, string>> = {
+  'kmail-api': 'kmail',
+  'admin-api': 'admin',
+};
 
 test.describe('the test folder layout @framework', () => {
   test('tests/ holds only the products, framework, setup, support and README.md', () => {

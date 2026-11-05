@@ -82,7 +82,7 @@ Two PERSONAL accounts, so of 20 endpoints:
   `kallID`; the lifecycle creates one.
 - **12 writes gated** — every one is destructive and **none is `productionSafe`**. A call rings a
   device / notifies participants, and the clear endpoints delete the log. They are exercised only
-  through `tests/kpost-api/flows/kall/kall-feature.spec.ts`, gated behind **`KALL_LIFECYCLE=true`**, each write
+  through `tests/kpost-api/e2e/kall/kall-lifecycle-e2e.spec.ts`, gated behind **`KALL_LIFECYCLE=true`**, each write
   carrying `allowLiveWrite: true` (the authorized-write control Katchup and Profile use), self-cleaning
   (a `finally` that calls `clearKallHistory` for both parties, so no failed step leaves an orphan).
 
