@@ -4,6 +4,7 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
 import { decodeJwt, jwtSubject } from '@utils/jwt';
+import { expectStored, filled } from '../../../support/db-stored';
 
 /**
  * Login behaviour the engine cannot check: wrong password, account enumeration, token claims, logout.
@@ -161,13 +162,27 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
       expect(opened.status, 'the throwaway session opens').toBe(200);
 
       const database = databases.for('kpost-api');
-      if (database.enabled) {
-        const row = await database.findOne<{ device_identity_primary: string }>({
-          table: 'TBL_KPOST_LOGIN_SESSION',
-          where: { kpost_id: testData.kpostId, device_identity_primary: ownDevice },
-        });
-        expect(row, 'the fresh login wrote a row to TBL_KPOST_LOGIN_SESSION').toBeDefined();
-      }
+      const ownSession = { kpost_id: testData.kpostId, device_identity_primary: ownDevice };
+      // SignUpLoginServiceV2Impl.java:156-161 puts a new sid in both tokens and :218 writes the
+      // device's session row with it (SignUpLoginDaoV2Impl.java:378-390, KPOSTLogin: session id,
+      // lower-cased device type, login time).
+      const sid = decodeJwt(String(opened.body.accessToken))?.payload.sid;
+      if (opened.status === 200)
+        await expectStored(
+          database,
+          'signup-login-user-login',
+          {
+            table: 'TBL_KPOST_LOGIN_SESSION',
+            where: ownSession,
+            columns: {
+              ...(typeof sid === 'string' ? { session_id: sid } : {}),
+              device_type: 'web',
+              login_time: filled,
+            },
+            rule: 'userLogin writes the device’s session row with the token’s sid and the login time',
+          },
+          endpoints,
+        );
 
       const logout = await endpoints.sendTo(
         'signup-login-user-logout',
@@ -186,17 +201,20 @@ test.describe('KPost Login · behaviour', { tag: ['@api', '@auth', '@regression'
       );
       expect(logout.status, 'logout of our own session succeeds').toBeLessThan(400);
 
-      // Logout answers success regardless, so the row is the judge.
-      if (database.enabled) {
-        const afterLogout = await database.findOne<{ device_identity_primary: string }>({
-          table: 'TBL_KPOST_LOGIN_SESSION',
-          where: { kpost_id: testData.kpostId, device_identity_primary: ownDevice },
-        });
-        expect(
-          afterLogout,
-          'logout actually removed the session row, not just answered success',
-        ).toBeUndefined();
-      }
+      // Logout answers success regardless, so the row is the judge. SignUpLoginDaoImpl.java:237-246
+      // calls KPOSTLogout for this kpostID + device, which removes the device's session row.
+      if (logout.status < 400)
+        await expectStored(
+          database,
+          'signup-login-user-logout',
+          {
+            table: 'TBL_KPOST_LOGIN_SESSION',
+            where: ownSession,
+            absent: true,
+            rule: 'userLogout removes the session row of the device it names, not just answers success',
+          },
+          endpoints,
+        );
 
       // BR-SL-LOGOUT: a deleted row is not enough; the logged-out JWT itself must stop authenticating.
       const reuseAttempt = await endpoints.sendTo(

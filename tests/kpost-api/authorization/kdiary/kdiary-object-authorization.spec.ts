@@ -2,6 +2,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { scheduleShape } from '@api/definitions/kpost/kdiary/write.api';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 /**
@@ -41,6 +42,7 @@ test.describe(
 
     test("an unrelated principal can read and silently touch another user's diary event @api @security", async ({
       endpoints,
+      validationEngine,
     }) => {
       const ownTitle = `QA Bench KDiary IDOR owner — ${Date.now()}`;
       const created = await endpoints.sendTo(
@@ -92,6 +94,12 @@ test.describe(
           'kdiary-get-event-date',
           { body: { eventIds: [eventID] } },
           { label: 'kdiary-idor:touch-baseline', auth: { principal: A }, allowLiveRead: true },
+        );
+        await checkOnRealRecord(
+          validationEngine,
+          'kdiary-get-event-date',
+          { body: { eventIds: [eventID] } },
+          eventID === undefined ? [] : [eventID],
         );
         const beforeJson = beforeTouch.json();
         const beforeBody = (beforeJson.ok ? beforeJson.value : {}) as Record<string, unknown>;

@@ -3,6 +3,7 @@ import type { Principal } from '@config/auth.config';
 import type { DatabaseClient } from '@database/database-client';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * Cross-user checks for group leave, the V1 legacy remove-member route, the full group photo and the
@@ -361,6 +362,18 @@ test.describe(
             (await membership(database, group, THIRD_MEMBER!.username))?.present,
             'control: the removed member’s row is marked removed',
           ).toBe(false);
+          // GroupController.java:92 → GroupServiceDaoImpl.java:201-207: removed_flag, admin_access N, remarks "removed".
+          await expectStored(
+            database,
+            'group-remove-member-v1-legacy',
+            {
+              table: MEMBERS,
+              where: { group_id: group.groupID, kpost_id: THIRD_MEMBER!.username },
+              columns: { removed_flag: true, admin_access: 'N', remarks: 'removed' },
+              rule: 'the legacy removeGroupMember marks the removed member\'s row removed with remarks "removed"',
+            },
+            endpoints,
+          );
 
           for (const [who, role] of [
             [OUTSIDER!, 'a stranger'],

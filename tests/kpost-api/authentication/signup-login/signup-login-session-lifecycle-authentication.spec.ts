@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { negativeInFlow } from '@engine/flow-negative';
 import { expect, test } from '@fixtures';
 
 /**
@@ -178,6 +179,20 @@ test.describe(
       expect(first.status, 'the first login succeeds').toBe(200);
       expect(second.status, 'the second login succeeds').toBe(200);
       expect(second.refreshToken, 'a login response exposes a refreshToken').toBeTruthy();
+
+      // Bad input first, signed by the session the token belongs to (the engine cannot sign as a
+      // session's own pair): a broken refreshToken must be refused, never crash and never mint tokens.
+      // Sent before the real redemption, so the session is still fresh for the checks below.
+      await negativeInFlow(
+        endpoints,
+        'signup-login-generate-jwt',
+        { body: { refreshToken: second.refreshToken } },
+        {
+          label: 'session-lifecycle:generate-jwt',
+          auth: { header: `Bearer ${second.accessToken}` },
+          allowLiveRead: true,
+        },
+      );
 
       const ownSession = await endpoints.sendTo(
         'signup-login-generate-jwt',

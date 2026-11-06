@@ -2,8 +2,9 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
-import { checkOnRealRecord } from '@engine/real-record';
+import { checkOnRealRecord, realRecordIds } from '@engine/real-record';
 import { expect, test } from '@fixtures';
+import { expectStored, filled } from '../../../support/db-stored';
 
 /**
  * Group feature flow: create a group and drive every group write (members, admin, rename, image,
@@ -23,6 +24,12 @@ const member = (kpostID: string, isAdmin = false): Record<string, unknown> => ({
   privacyStatus: 'Y',
   remarks: 'created',
 });
+
+/** Where updateGroupProfileImage stores the photo (AWSs3ClientServiceImpl.java:731-739). */
+const groupPicturePath = (groupKpostID: string): string => {
+  const at = (s: string): string => s.split('@').join('_');
+  return `${at(groupKpostID)}/profile/${at(groupKpostID.split('.')[0] ?? groupKpostID)}.jpg`;
+};
 
 const createBody = (): Record<string, unknown> => ({
   activeStatus: 'Y',
@@ -125,16 +132,58 @@ test.describe(
           { type: 'requirement', description: 'FR-GM-011' },
         ],
       },
-      async ({ endpoints, validationEngine }) => {
+      async ({ endpoints, validationEngine, databases }) => {
+        const db = databases.for('kpost-api');
         let groupID: number | undefined;
         let createdKpostID: string | undefined;
         try {
-          const created = await as(endpoints, A, 'group-create', createBody(), 'create');
+          const sentCreate = createBody();
+          const created = await as(endpoints, A, 'group-create', sentCreate, 'create');
           expect.soft(created.status, 'createUserGroup is accepted').toBeLessThan(300);
           const groupKpostID = created.data.groupKpostID as string | undefined;
           groupID = created.data.groupID as number | undefined;
           createdKpostID = groupKpostID;
           expect.soft(groupKpostID, 'a groupKpostID is returned').toBeTruthy();
+
+          if (created.status < 300 && groupKpostID && groupID) {
+            // GroupServiceImpl.java:141-179 saves the group (name capitalised, admin from the token) and its members.
+            await expectStored(
+              db,
+              'group-create',
+              {
+                table: 'TBL_KPOST_USERGROUP_MASTER',
+                where: { group_id: groupID },
+                columns: {
+                  group_kpost_id: groupKpostID,
+                  group_name: sentCreate.groupKpostName,
+                  admin_kpost_id: A.username,
+                  active_status: 'Y',
+                  is_private_group: 'N',
+                  created_by: A.username,
+                },
+                rule: 'createUserGroup stores the group with the name, flags and creator it was sent, the caller as admin',
+              },
+              endpoints,
+            );
+            // GroupServiceImpl.java:158-179: each memberDetails entry becomes a member row (cascade save).
+            await expectStored(
+              db,
+              'group-create',
+              {
+                table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+                where: { group_id: groupID, kpost_id: testData.victimKpostId },
+                columns: {
+                  name: 'QA Bench',
+                  admin_access: 'N',
+                  privacy_status: 'Y',
+                  remarks: 'created',
+                  removed_flag: false,
+                },
+                rule: 'createUserGroup stores a membership row for each member it was sent',
+              },
+              endpoints,
+            );
+          }
 
           if (groupKpostID && groupID) {
             const steps: Array<[Principal, string, Record<string, unknown>, string]> = [
@@ -190,13 +239,26 @@ test.describe(
             expect
               .soft(imageUpdate.status, 'updateGroupProfileImage is accepted')
               .toBeLessThan(300);
+            if (imageUpdate.status < 300)
+              // GroupServiceDaoImpl.java:135-143 sets group_picture_path to the uploaded file's S3 key.
+              await expectStored(
+                db,
+                'group-update-image',
+                {
+                  table: 'TBL_KPOST_USERGROUP_MASTER',
+                  where: { group_id: groupID },
+                  columns: { group_picture_path: groupPicturePath(groupKpostID) },
+                  rule: "updateGroupProfileImage stores the uploaded photo's path on the group",
+                },
+                endpoints,
+              );
 
             // The id-keyed group reads the sweep cannot send, through the full engine on this group.
-            for (const [id, pathParams] of [
+            for (const [id, pathParams] of realRecordIds([
               ['group-details-by-id', { groupKpostID }],
               ['group-download-image', { groupKpostID, kpostID: A.username }],
               ['group-download-full-image', { groupKpostID, kpostID: A.username }],
-            ] as const)
+            ]))
               await checkOnRealRecord(validationEngine, id, { pathParams: { ...pathParams } }, [
                 groupKpostID,
               ]);
@@ -223,6 +285,79 @@ test.describe(
                     : bodyObj;
                 const status = (await as(endpoints, who, id, body, label)).status;
                 expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+
+                // What each accepted write stored, read back from its row.
+                if (status < 300 && id === 'group-add-user')
+                  // GroupServiceImpl.java:379-399 adds a member row (removed_flag false) and saves the group.
+                  await expectStored(
+                    db,
+                    'group-add-user',
+                    {
+                      table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+                      where: { group_id: groupID, kpost_id: C.username },
+                      columns: {
+                        name: 'QA Bench',
+                        admin_access: 'N',
+                        privacy_status: 'Y',
+                        remarks: 'created',
+                        removed_flag: false,
+                      },
+                      rule: 'addUserToGroup stores an active membership row with the details it was sent',
+                    },
+                    endpoints,
+                  );
+                if (status < 300 && id === 'group-edit-name')
+                  // GroupRepository.java:116-118 sets group_name on the group row.
+                  await expectStored(
+                    db,
+                    'group-edit-name',
+                    {
+                      table: 'TBL_KPOST_USERGROUP_MASTER',
+                      where: { group_id: groupID },
+                      columns: { group_name: 'QA Bench Renamed' },
+                      rule: 'editGroupName stores the new group name',
+                    },
+                    endpoints,
+                  );
+                if (status < 300 && id === 'group-remove-image')
+                  // GroupServiceDaoImpl.java:135-143 (profileImagePath null) clears group_picture_path.
+                  await expectStored(
+                    db,
+                    'group-remove-image',
+                    {
+                      table: 'TBL_KPOST_USERGROUP_MASTER',
+                      where: { group_id: groupID },
+                      columns: { group_picture_path: null },
+                      rule: "removeGroupProfileImage clears the group's photo path",
+                    },
+                    endpoints,
+                  );
+                if (status < 300 && id === 'group-leave')
+                  // GroupServiceDaoImpl.java:226-234 flags the caller's own row removed, admin_access N, remarks "left".
+                  await expectStored(
+                    db,
+                    'group-leave',
+                    {
+                      table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+                      where: { group_id: groupID, kpost_id: C.username },
+                      columns: { removed_flag: true, admin_access: 'N', remarks: 'left' },
+                      rule: 'leaveFromGroup marks the caller\'s membership row removed with remarks "left"',
+                    },
+                    endpoints,
+                  );
+                if (status < 300 && id === 'group-remove-member')
+                  // GroupServiceDaoImpl.java:201-207 flags each named member removed, admin_access N, remarks "removed".
+                  await expectStored(
+                    db,
+                    'group-remove-member',
+                    {
+                      table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+                      where: { group_id: groupID, kpost_id: testData.victimKpostId },
+                      columns: { removed_flag: true, admin_access: 'N', remarks: 'removed' },
+                      rule: 'removeGroupMember marks the removed member\'s row removed with remarks "removed"',
+                    },
+                    endpoints,
+                  );
 
                 // The active-member count moves by exactly one and the right person appears/disappears.
                 const memberStep: Record<string, [string, string, number]> = {
@@ -259,6 +394,44 @@ test.describe(
                 }
               }
             }
+
+            // The group writes the sweep cannot aim at a real group, through the full engine on this
+            // one (its negative, boundary and security probes reach the limits only here). In this
+            // order: rename, re-add C (who left above), give C admin, remove C. The finally deletes the
+            // group whatever the probes did; the boundary cleanup removes any filler member rows.
+            const realGroupID = groupID;
+            const onThisGroup = (id: string, body: Record<string, unknown>) =>
+              checkOnRealRecord(validationEngine, id, { body }, [groupKpostID, realGroupID]);
+            for (const [id, body] of realRecordIds([
+              ['group-edit-name', { groupKpostID, groupKpostName: 'QA Bench Renamed' }],
+              ['group-add-user', { groupID, groupKpostID, memberDetails: [member(C.username)] }],
+            ]))
+              await onThisGroup(id, { ...body });
+            // updateGroupAdminAccess matches the membership row id (ids: [0] matches none and 400s,
+            // GroupServiceDaoImpl.java:67-71), so C's real row id is read first.
+            const cRow = (await activeMembers(endpoints, groupKpostID)).find(
+              (m) => m.kpostID === C.username,
+            );
+            if (cRow)
+              await checkOnRealRecord(
+                validationEngine,
+                'group-admin-access',
+                {
+                  body: { kpostIDs: [C.username], ids: [cRow.id], groupID, hasAdminAccess: 'Y' },
+                },
+                [groupKpostID, groupID, cRow.id],
+              );
+            else
+              test.info().annotations.push({
+                type: 'not-judged',
+                description: 'group-admin-access: C was not an active member after the re-add',
+              });
+            await checkOnRealRecord(
+              validationEngine,
+              'group-remove-member',
+              { body: { memberKpostIdList: [C.username], groupKpostID, groupID } },
+              [groupKpostID, groupID],
+            );
           }
         } finally {
           if (groupID) {
@@ -282,6 +455,32 @@ test.describe(
             expect
               .soft(deleted.status, 'the test group is deleted (nothing left behind)')
               .toBe(200);
+            if (deleted.status === 200) {
+              // GroupServiceDaoImpl.java:290-297 (the admin, its last member): own row "Group Deleted" + removed,
+              // and the group inactive.
+              await expectStored(
+                db,
+                'group-delete',
+                {
+                  table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+                  where: { group_id: groupID, kpost_id: A.username },
+                  columns: { remarks: 'Group Deleted', removed_flag: true },
+                  rule: 'deleteGroup marks the admin\'s membership row "Group Deleted" and removed',
+                },
+                endpoints,
+              );
+              await expectStored(
+                db,
+                'group-delete',
+                {
+                  table: 'TBL_KPOST_USERGROUP_MASTER',
+                  where: { group_id: groupID },
+                  columns: { active_status: 'N' },
+                  rule: 'deleteGroup by its admin, once every member is removed, sets the group inactive',
+                },
+                endpoints,
+              );
+            }
           }
         }
       },
@@ -339,6 +538,18 @@ test.describe(
             'promote-admin',
           );
           expect(promote.status, 'FR-GM-012: promote to admin is accepted').toBeLessThan(300);
+          // GroupServiceDaoImpl.java:67-77 sets admin_access and modified_date on the named membership row.
+          await expectStored(
+            database,
+            'group-admin-access',
+            {
+              table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',
+              where: { id: memberRowId, group_id: groupID },
+              columns: { admin_access: 'Y', modified_date: filled, removed_flag: false },
+              rule: "addOrRemoveAdminAccess stores the grant (admin_access Y) on the member's row",
+            },
+            endpoints,
+          );
 
           const afterPromote = await database.findOne<{ admin_access: string }>({
             table: 'TBL_KPOST_USERGROUP_MEMBERDETAILS',

@@ -18,7 +18,7 @@ const NAME = /^[A-Za-z0-9_]+$/;
 /** A created table is read through its newest rows only (the filler is this run's). */
 const RECENT_ROWS = 50_000;
 /** Auto-increment keys; a text key (uuid, session id) is scanned whole. */
-const NUMERIC_KEYS = new Set(['id', 'msg_id', 'kall_id']);
+const NUMERIC_KEYS = new Set(['id', 'msg_id', 'kall_id', 'group_id', 'event_id']);
 
 /** Tables whose filler rows the bench created: key column, and the child rows to delete first. */
 const CREATED_ROWS: Record<string, { key: string; children: readonly string[] }> = {
@@ -52,6 +52,21 @@ const CREATED_ROWS: Record<string, { key: string; children: readonly string[] }>
     ],
   },
   TBL_KPOST_LOGIN_HISTORY: { key: 'id', children: [] },
+  // Since 2026-11-05 (limits for every module): a group or KDiary event the engine created with an
+  // edge-value name is the bench's own; it goes whole, never left as a nameless row.
+  TBL_KPOST_USERGROUP_MASTER: {
+    key: 'group_id',
+    children: ['TBL_KPOST_USERGROUP_MEMBERDETAILS', 'TBL_KPOST_USERGROUP_MEMBERS_REMOVED'],
+  },
+  // A member row whose kpost_id or designation is filler names no real person.
+  TBL_KPOST_USERGROUP_MEMBERDETAILS: { key: 'id', children: [] },
+  TBL_KPOST_KDIARY_SCHEDULE: {
+    key: 'event_id',
+    children: ['TBL_KPOST_KDIARY_SCHEDULE_PARTICIPANT'],
+  },
+  TBL_KPOST_KDIARY_REPORT: { key: 'id', children: [] },
+  // An audit row for a request whose kpostID was filler (the audit stores the caller-sent id).
+  TBL_KPOST_AUDIT_MASTER: { key: 'id', children: [] },
   // No id column: a bench session row is found by its session id.
   TBL_KPOST_LOGIN_SESSION: { key: 'session_id', children: [] },
 };
@@ -80,7 +95,8 @@ test.describe(
       for (const suite of ['kpost-api', 'kmail-api'] as const)
         for (const id of sourceLimitIds(suite))
           for (const limits of Object.values(sourceLimits(suite, id) ?? {}))
-            for (const limit of Object.values(limits)) {
+            for (const [keyword, limit] of Object.entries(limits)) {
+              if (keyword === 'none' || !('from' in limit)) continue;
               const column = /^db-column (\w+)\.(\w+)/.exec(limit.from);
               if (column) add(column[1]!, column[2]!);
             }

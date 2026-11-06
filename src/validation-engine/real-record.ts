@@ -1,9 +1,10 @@
 import type { RequestSpec } from '@api/client/request-builder';
 import { apiRegistry } from '@api/definitions/index';
-import { expect } from '@fixtures';
+import { expect, test } from '@fixtures';
 import { formatReport } from '@reporting/report-formatter';
 import { isLenientAcceptanceFalsePositive } from '../bug-tracker/findings/bug-candidate';
 import { KNOWN_FALSE_POSITIVES } from '../bug-tracker/gates/known-false-positives';
+import { ProductionSafetyError } from './production-guard';
 import type { ValidationEngine } from './validation-engine';
 
 /**
@@ -19,8 +20,11 @@ import type { ValidationEngine } from './validation-engine';
  * engine run, so its findings are filed through the same pipeline. The pattern is the Admin API's
  * endpoint matrix (tests/admin-api/e2e/admin-endpoint-matrix-e2e.spec.ts).
  *
- * The test-type ledger credits every endpoint named in a `checkOnRealRecord(` call.
+ * The test-type ledger credits an endpoint only when its id is the literal second argument of a
+ * `checkOnRealRecord(` call, or is listed in a `realRecordIds([...])` that a loop of such calls runs on.
  */
+export const realRecordIds = <const T extends readonly unknown[]>(list: T): T => list;
+
 export async function checkOnRealRecord(
   engine: ValidationEngine,
   endpointId: string,
@@ -29,7 +33,19 @@ export async function checkOnRealRecord(
 ): Promise<void> {
   const base = apiRegistry.get(endpointId);
   const definition = { ...base, productionSafe: true, request: () => spec };
-  const report = await engine.validate(definition, { ownedIdentifiers });
+  let report;
+  try {
+    report = await engine.validate(definition, { ownedIdentifiers });
+  } catch (error) {
+    // The guard refused the engine (a shared-state write, an SMS sender): a fact to record, never
+    // a reason to fail the flow that called this. Any other error is real and propagates.
+    if (!(error instanceof ProductionSafetyError)) throw error;
+    test.info().annotations.push({
+      type: 'real-record-refused',
+      description: `${endpointId}: ${error.message.slice(0, 300)}`,
+    });
+    return;
+  }
   // A check judged not a defect (known-false-positives.ts, by endpoint + check) does not fail here,
   // nor does lenient acceptance of bad input with no crash: the filer drops those too
   // (isLenientAcceptanceFalsePositive), so the flow fails only on what would be filed.

@@ -4,6 +4,7 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { expect, test } from '@fixtures';
+import { expectStored } from '../../../support/db-stored';
 
 const K = AUTH_PROFILES.kpost;
 const owner = K.principals.find((p) => p.key === 'personal');
@@ -25,7 +26,8 @@ test.describe(
     test(
       "an attacker can recall the owner's message via the legacy path by naming the owner as sender",
       { tag: ['@bug-1267'] /* [KP-6F5E6B] */ },
-      async ({ endpoints }) => {
+      async ({ endpoints, databases }) => {
+        const db = databases.for('kpost-api');
         const sent = await endpoints.sendTo(
           'katchup-send-message',
           { body: sendShape() },
@@ -47,6 +49,17 @@ test.describe(
             { body: { msgID, sender: owner!.username, groupFlag: false } },
             { label: 'legacy-recall:attack', auth: { principal: attacker! }, allowLiveWrite: true },
           );
+
+          // The row is the judge of what the attack changed (read before the hard check below):
+          // KatchupRepository.java:41 recalls by setting message_type 7 where sender = the given
+          // sender, so the owner's message must keep the type it was sent with. No `endpoints`
+          // argument: the violation below already files this root cause, and one root cause is one bug.
+          await expectStored(db, 'katchup-legacy-recall-message', {
+            table: 'TBL_KPOST_KATCHUP_MESSAGES',
+            where: { msg_id: Number(msgID) },
+            columns: { message_type: sendShape().messageType },
+            rule: "a recall sent with someone else's token leaves the owner's message unrecalled (message_type unchanged)",
+          });
 
           const succeeded = attack.status < 300;
           if (succeeded) {

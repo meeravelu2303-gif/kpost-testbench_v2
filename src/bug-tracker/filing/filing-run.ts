@@ -102,6 +102,12 @@ export async function runFiling(
   log: Logger,
 ): Promise<FilingResult> {
   const gate = applyValidityGate(input.candidates);
+  // A focused engine run checked one type only: it may neither file nor judge any bug fixed.
+  if (env.ENGINE_FOCUS)
+    return {
+      gate,
+      notFiledReason: `ENGINE_FOCUS=${env.ENGINE_FOCUS} run — a focused run files, reopens and closes nothing`,
+    };
   const client = config.enabled ? new BugzillaClient(config, log) : undefined;
   if (!config.enabled || !client)
     return { gate, notFiledReason: 'BUGZILLA_URL / BUGZILLA_API_KEY not configured' };

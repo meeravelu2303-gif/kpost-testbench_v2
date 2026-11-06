@@ -3,8 +3,10 @@ import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import { isSqlClient, type SqlDatabaseClient } from '@database/database-client';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { boundaryInFlow, negativeInFlow } from '@engine/flow-negative';
 import { expect, test } from '@fixtures';
 import { deleteSanityAccount } from '../../../kpost-ui/support/sanity-account';
+import { expectStored, filled } from '../../../support/db-stored';
 
 /**
  * The account actions no shared QA account may take, on a throwaway account made for this run:
@@ -161,6 +163,57 @@ test.describe(
           'signup',
         );
         expect(signup.status, `signup creates ${me.kpostId}`).toBe(200);
+        // SignUpLoginServiceImpl.java:277-319 fills the user + profile rows from the body (kpostID and
+        // email lower-cased, password hashed, PERSONAL, ENGLISH) and :377 saves them.
+        const calendarDay = (v: unknown) => {
+          if (!(v instanceof Date)) return typeof v === 'string' ? v.slice(0, 10) : '';
+          const two = (n: number) => String(n).padStart(2, '0');
+          return `${v.getFullYear()}-${two(v.getMonth() + 1)}-${two(v.getDate())}`;
+        };
+        const newAccount = { kpost_id: me.kpostId.toLowerCase() };
+        await expectStored(
+          db,
+          'signup-login-signup',
+          {
+            table: 'TBL_KPOST_USER_MASTER',
+            where: newAccount,
+            columns: {
+              first_name: 'Apiflow',
+              last_name: 'Bench',
+              mobile_number: me.mobile,
+              gender: 'female',
+              date_of_birth: (v: unknown) => calendarDay(v) === '1995-01-01',
+              country_code: '91',
+              email: me.kpostId.toLowerCase(),
+              user_type: 'PERSONAL',
+              active_status: 'yes',
+              created_by: 'user',
+              password: filled,
+              created_date: filled,
+            },
+            rule: 'signup stores the new account’s name, mobile, gender, birth date and a password in the user row',
+          },
+          endpoints,
+        );
+        await expectStored(
+          db,
+          'signup-login-signup',
+          {
+            table: 'TBL_KPOST_USER_PROFILE',
+            where: newAccount,
+            columns: {
+              state: 'Tamil Nadu',
+              city: 'Chennai',
+              area_name: 'Pazhavanthangal',
+              pin_code: testData.pinCode,
+              landline_number: '04400000000',
+              preferred_language: 'ENGLISH',
+              privacy_settings: 0,
+            },
+            rule: 'signup stores the sent address fields and the default language and privacy in the profile row',
+          },
+          endpoints,
+        );
 
         // 2. Primary device, then a new primary (the token stays valid: the session is untouched).
         const primary = randomUUID();
@@ -203,6 +256,40 @@ test.describe(
             `importPhoneContacts stores the number (${imported.bodyText.slice(0, 160)})`,
           )
           .toBe(200);
+        /** The stored phone-contact JSON array holds an entry for our number with these fields. */
+        const phoneEntry =
+          (fields: Record<string, string>) =>
+          (value: unknown): boolean => {
+            let list: unknown = value;
+            try {
+              if (Buffer.isBuffer(value)) list = JSON.parse(value.toString('utf8'));
+              else if (typeof value === 'string') list = JSON.parse(value);
+            } catch {
+              return false;
+            }
+            return (
+              Array.isArray(list) &&
+              list.some(
+                (e: Record<string, unknown>) =>
+                  String(e?.mobileNo) === me.mobile &&
+                  Object.entries(fields).every(([k, want]) => String(e?.[k]) === want),
+              )
+            );
+          };
+        // ContactsDirectoryServiceImpl.java:159 writes the imported list (mobileNo, name, …) into
+        // primary_phone_contacts when the session's device is the account's primary device.
+        if (imported.status === 200)
+          await expectStored(
+            db,
+            'contacts-import-phone',
+            {
+              table: 'TBL_KPOST_USER_PHONECONTACT_DETAILS',
+              where: newAccount,
+              columns: { primary_phone_contacts: phoneEntry({ name: 'QA Bench' }) },
+              rule: "importPhoneContacts stores each imported number in the caller's primary_phone_contacts",
+            },
+            endpoints,
+          );
         const invited = await asMe(
           'contacts-update-invite',
           { mobileNumber: me.mobile },
@@ -215,6 +302,20 @@ test.describe(
             `updateInviteStatus marks it invited (${invited.bodyText.slice(0, 160)})`,
           )
           .toBe(200);
+        // ContactsDirectoryServiceImpl.java:765 sets inviteStatus "Y" on the matching entry and :785
+        // writes the list back to primary_phone_contacts.
+        if (invited.status === 200)
+          await expectStored(
+            db,
+            'contacts-update-invite',
+            {
+              table: 'TBL_KPOST_USER_PHONECONTACT_DETAILS',
+              where: newAccount,
+              columns: { primary_phone_contacts: phoneEntry({ inviteStatus: 'Y' }) },
+              rule: "updateInviteStatus marks the named number invited (inviteStatus Y) in the caller's imported contacts",
+            },
+            endpoints,
+          );
         const list = await asMe('contacts-imported-phone', {}, 'imported-phone', onDevice);
         expect
           .soft(list.bodyText, 'the imported number now reads as invited')
@@ -245,12 +346,38 @@ test.describe(
         expect.soft(updSecondary.status, 'updateDeviceAsSecondary').toBe(200);
 
         // 4. Access code: the signed-in route and the public one (both need the login password).
+        /** The account's stored credential column, read only to tell "changed" (never printed). */
+        const storedSecret = async (column: 'access_code' | 'password') => {
+          const [row] = await db.query<Record<string, unknown>>(
+            `SELECT ${column} AS secret FROM TBL_KPOST_USER_MASTER WHERE kpost_id = ?`,
+            [newAccount.kpost_id],
+          );
+          return typeof row?.secret === 'string' ? row.secret : undefined;
+        };
+        const codeBefore = await storedSecret('access_code');
         const changeCode = await asMe(
           'profile-change-or-forgot-access-code',
           { accessCode: '2468', currentPassword: PASSWORD },
           'change-access-code',
         );
         expect.soft(changeCode.status, 'changeOrForgotAccessCode').toBe(200);
+        // UserProfileDaoImpl.java:857 sets access_code once the current password matches. A secret:
+        // only that the column was set to something new is asserted, never its value.
+        if (changeCode.status === 200)
+          await expectStored(
+            db,
+            'profile-change-or-forgot-access-code',
+            {
+              table: 'TBL_KPOST_USER_MASTER',
+              where: newAccount,
+              columns: {
+                access_code: (v: unknown) => typeof v === 'string' && v !== '' && v !== codeBefore,
+              },
+              rule: "changeOrForgotAccessCode replaces the caller's stored access code",
+            },
+            endpoints,
+          );
+        const codeBeforeSet = await storedSecret('access_code');
         const setCode = await asMe(
           'signup-login-set-access-code',
           { kpostID: me.kpostId, currentPassword: PASSWORD, accessCode: '1357' },
@@ -260,14 +387,49 @@ test.describe(
         expect
           .soft(setCode.bodyText, 'and the body says SUCCESS, not a FAILURE at HTTP 200')
           .toMatch(/"status":"SUCCESS"/);
+        // UserProfileDaoImpl.java:856-862 (via SignUpLoginControllerV2.java:337) sets access_code once
+        // the current password matches. A secret: only that it was set to something new is asserted.
+        if (setCode.status === 200)
+          await expectStored(
+            db,
+            'signup-login-set-access-code',
+            {
+              table: 'TBL_KPOST_USER_MASTER',
+              where: newAccount,
+              columns: {
+                access_code: (v: unknown) =>
+                  typeof v === 'string' && v !== '' && v !== codeBeforeSet,
+              },
+              rule: 'setAccessCode replaces the access code stored on the caller’s account',
+            },
+            endpoints,
+          );
 
         // 5. Password change: the old password no longer logs in, the new one does.
+        const passwordBefore = await storedSecret('password');
         const changed = await asMe(
           'profile-change-password',
           { oldPassword: PASSWORD, confirmPassword: NEW_PASSWORD },
           'change-password',
         );
         expect.soft(changed.status, 'changePassword').toBe(200);
+        // UserProfileDaoImpl.java:341 stores PasswordHasher.hash(confirmPassword), a BCrypt hash. A
+        // secret: only that a new BCrypt hash replaced the old one is asserted, never its value.
+        if (changed.status === 200)
+          await expectStored(
+            db,
+            'profile-change-password',
+            {
+              table: 'TBL_KPOST_USER_MASTER',
+              where: newAccount,
+              columns: {
+                password: (v: unknown) =>
+                  typeof v === 'string' && /^\$2[aby]\$\d{2}\$/.test(v) && v !== passwordBefore,
+              },
+              rule: "changePassword replaces the caller's stored password with a new BCrypt hash",
+            },
+            endpoints,
+          );
 
         // 6. Log out from all devices (FR-S12): a bodyless GET (the workbook and the deployed server
         //    agree; the local source copy's POST is older). Each check uses a fresh session.
@@ -316,6 +478,29 @@ test.describe(
           .toBe(false);
         // A new sign-in (its own cache key, the new password) carries on.
         const relogged = session('throwaway-relogin');
+
+        // 6b. Bad input on the credential writes, by this flow on the throwaway account only (never the
+        //     engine). A lenient answer may change a credential: the account is deleted at the end.
+        const credentialWrite = {
+          label: 'throwaway',
+          auth: { principal: relogged },
+          ownedIdentifiers: owned,
+          throwawayAccount: me.kpostId,
+        };
+        for (const [id, body] of [
+          [
+            'signup-login-set-access-code',
+            { kpostID: me.kpostId, currentPassword: NEW_PASSWORD, accessCode: '1357' },
+          ],
+          [
+            'profile-change-or-forgot-access-code',
+            { accessCode: '2468', currentPassword: NEW_PASSWORD },
+          ],
+          ['profile-change-password', { oldPassword: NEW_PASSWORD, confirmPassword: NEW_PASSWORD }],
+        ] as const) {
+          await negativeInFlow(endpoints, id, { body: { ...body } }, credentialWrite);
+          await boundaryInFlow(endpoints, id, { body: { ...body } }, credentialWrite);
+        }
 
         // 7. Deactivation (the account's session is gone afterwards; login answers 403).
         expect

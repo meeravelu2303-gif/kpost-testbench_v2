@@ -2,8 +2,11 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { isSqlClient, type SqlDatabaseClient } from '@database/database-client';
+import { text } from '@database/kpost-assertions';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { boundaryInFlow, negativeInFlow } from '@engine/flow-negative';
 import { expect, test } from '@fixtures';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * Katchup changeCaption (KatchupServiceImpl.captionChange): a one-off migration that rewrites
@@ -112,9 +115,50 @@ test.describe(
         sent.push(mine);
         const own = await rewrite(endpoints, SENDER!, mine, 'sender');
         expect.soft(own.status, 'the sender’s own call is accepted').toBe(200);
-        expect
-          .soft(await reference(db, mine), 'and the sender’s message is rewritten')
-          .toContain('attachmentCaption');
+        if (own.status === 200)
+          // KatchupServiceImpl.java:2352 renames attachmentDetails to attachmentCaption in the
+          // reference text, :2362 saves the row.
+          await expectStored(
+            db,
+            'katchup-change-caption',
+            {
+              table: 'TBL_KPOST_KATCHUP_MESSAGES',
+              where: { msg_id: mine },
+              columns: {
+                reference_message: (value: unknown) => {
+                  const stored = text(value) ?? '';
+                  return (
+                    stored.includes('attachmentCaption') && !stored.includes('attachmentDetails')
+                  );
+                },
+              },
+              rule: "changeCaption rewrites attachmentDetails to attachmentCaption in the caller's own message reference",
+            },
+            endpoints,
+          );
+        // Bad input on the sender's own message, by this flow (a shared-state write: never the engine).
+        await negativeInFlow(
+          endpoints,
+          'katchup-change-caption',
+          { body: { referenceMessageIDList: [mine] } },
+          {
+            label: 'change-caption',
+            auth: { principal: SENDER! },
+            allowGlobalLifecycle: true,
+            ownedIdentifiers: [mine],
+          },
+        );
+        await boundaryInFlow(
+          endpoints,
+          'katchup-change-caption',
+          { body: { referenceMessageIDList: [mine] } },
+          {
+            label: 'change-caption',
+            auth: { principal: SENDER! },
+            allowGlobalLifecycle: true,
+            ownedIdentifiers: [mine],
+          },
+        );
       } finally {
         for (const msgID of sent) {
           await endpoints

@@ -1,8 +1,8 @@
 {
   "suite": "kpost-api",
   "derivedFrom": "D:/KPOST_PROJECTS/KPOST_V5.0 (controllers, services, request DTOs) + QA DB column widths (information_schema, kpost schema)",
-  "derivedOn": "2026-11-01",
-  "note": "Input limits for request.boundary-value / request.boundary-accept. Each cites its source; a db-column limit is the width of the column the field is saved into (strict SQL mode). Bench-maintained; re-derive when the backend changes.",
+  "derivedOn": "2026-11-05",
+  "note": "Input limits for request.boundary-value / request.boundary-accept. Each cites its source; a db-column limit is the width of the column the field is saved into (strict SQL mode). A field with no limit to probe carries a cited \"none\" (only compared, a flag, never read, or a JSON/longtext column with no per-field width). Bench-maintained; re-derive when the backend changes.",
   "endpoints": {
     "admin-adding-user-by-admin": {
       "body.activeStatus": {
@@ -10,6 +10,13 @@
           "value": 10,
           "from": "db-column TBL_KPOST_USER_MASTER.active_status varchar(10)",
           "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1075"
+        }
+      },
+      "body.companyID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_USER_MASTER.company_id int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1107"
         }
       },
       "body.companyName": {
@@ -87,6 +94,12 @@
           "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1113"
         }
       },
+      "body.requestType": {
+        "none": {
+          "reason": "only compared (\"reallocate\")",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1109"
+        }
+      },
       "body.role": {
         "maxLength": {
           "value": 45,
@@ -102,12 +115,150 @@
         }
       }
     },
+    "admin-create-remove-backup-admin": {
+      "body.companyID": {
+        "none": {
+          "reason": "ignored: replaced by the caller's own company",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1611"
+        }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "only used in the UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:569"
+        }
+      }
+    },
+    "admin-display-name-suggestion": {
+      "body.companyName": {
+        "none": {
+          "reason": "only shortened into a display-name suggestion; nothing saved",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CompanyDaoImpl.java:82"
+        }
+      },
+      "body.designation": {
+        "none": {
+          "reason": "only shortened into a display-name suggestion; nothing saved",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CompanyDaoImpl.java:94"
+        }
+      }
+    },
     "admin-hold-or-release": {
       "body.activeStatus": {
         "maxLength": {
           "value": 10,
           "from": "db-column TBL_KPOST_USER_MASTER.active_status varchar(10)",
           "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:544-550"
+        }
+      },
+      "body.companyID": {
+        "none": {
+          "reason": "ignored: replaced by the caller's own company",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1599"
+        }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "only used in the UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:548"
+        }
+      }
+    },
+    "admin-kpostid-designation-suggestion": {
+      "body.companyID": {
+        "none": {
+          "reason": "ignored: replaced by the caller's own company",
+          "source": "src/main/java/com/webservice/kpost/controller/AdminController.java:321"
+        }
+      },
+      "body.companyName": {
+        "none": {
+          "reason": "only cut into a KPost ID prefix, then looked up; nothing saved",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:636"
+        }
+      },
+      "body.designation": {
+        "none": {
+          "reason": "only cut into a KPost ID part and compared with existing designations",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:736"
+        }
+      }
+    },
+    "admin-reset-password": {
+      "body.companyID": {
+        "none": {
+          "reason": "never read: the target's company comes from its own record",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1527"
+        }
+      },
+      "body.countryID": {
+        "none": {
+          "reason": "only used in the user lookup",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1542"
+        }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "only looked up and used in the password UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1525"
+        }
+      },
+      "body.mobileNumber": {
+        "none": {
+          "reason": "only seeds the generated password, which is hashed before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1534"
+        }
+      },
+      "body.userType": {
+        "none": {
+          "reason": "only used in the user lookup and compared (BUSINESS / Association / Society / Club)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1547"
+        }
+      }
+    },
+    "admin-terminate-user": {
+      "body.companyID": {
+        "none": {
+          "reason": "ignored: replaced by the caller's own company",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1622"
+        }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "only looked up (em.find) and used in the UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:609"
+        }
+      }
+    },
+    "admin-update-bank-account": {
+      "body.accountHolderName": {
+        "none": {
+          "reason": "serialized into the bank_details JSON column (no width limit)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1715"
+        }
+      },
+      "body.accountNumber": {
+        "none": {
+          "reason": "serialized into the bank_details JSON column (no width limit)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1714"
+        }
+      },
+      "body.bankName": {
+        "none": {
+          "reason": "serialized into the bank_details JSON column (no width limit)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1717"
+        }
+      },
+      "body.branch": {
+        "none": {
+          "reason": "serialized into the bank_details JSON column (no width limit)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1718"
+        }
+      },
+      "body.ifscCode": {
+        "none": {
+          "reason": "serialized into the bank_details JSON column (no width limit)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1716"
         }
       }
     },
@@ -149,6 +300,12 @@
       }
     },
     "admin-update-role": {
+      "body.kpostID": {
+        "none": {
+          "reason": "only used in the company-membership check and the UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:710"
+        }
+      },
       "body.role": {
         "maxLength": {
           "value": 45,
@@ -163,6 +320,28 @@
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/integration/PresignedURLController.java:243"
+        }
+      },
+      "body.attachmentsUuid[]": {
+        "none": {
+          "reason": "only looked up (attachment path by uuid)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/integration/PreSignedURLServiceImpl.java:441"
+        }
+      }
+    },
+    "aws-check-attachment-get": {
+      "path.uuid": {
+        "none": {
+          "reason": "only looked up (attachment path by uuid + caller)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/integration/PreSignedURLServiceImpl.java:412"
+        }
+      }
+    },
+    "aws-delete-attachment": {
+      "path.uuid": {
+        "none": {
+          "reason": "only looked up (attachment path by uuid + caller)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/integration/PreSignedURLServiceImpl.java:382-384"
         }
       }
     },
@@ -190,6 +369,13 @@
       }
     },
     "aws-katchup-presigned": {
+      "body.extension": {
+        "maxLength": {
+          "value": 63,
+          "from": "db-column TBL_KPOST_KATCHUP_ATTACHMENT.s3_file_name varchar(100), saved as <36-char uuid> + \".\" + extension (100 - 37 = 63)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/integration/PreSignedURLServiceImpl.java:245,293"
+        }
+      },
       "body.fileName": {
         "maxLength": {
           "value": 400,
@@ -214,6 +400,60 @@
         }
       }
     },
+    "common-company-details": {
+      "body.mobileNumber": {
+        "none": {
+          "reason": "only compared in the user lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:779"
+        }
+      }
+    },
+    "common-company-details-by-admin": {
+      "body.mobileNumber": {
+        "none": {
+          "reason": "only compared in the user lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:1023"
+        }
+      }
+    },
+    "common-company-details-by-mobile-and-product": {
+      "body.mobileNumber": {
+        "none": {
+          "reason": "only compared in the user lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:1073"
+        }
+      },
+      "body.productId": {
+        "none": {
+          "reason": "only sent to the Admin module service (getKpostIDsByCompanyIdAndProductId)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1518"
+        }
+      }
+    },
+    "common-company-name-exist": {
+      "path.companyName": {
+        "none": {
+          "reason": "only looked up (findByCompanyName) and sent to the KSMACC service",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:1115"
+        }
+      }
+    },
+    "common-country": {
+      "body.countryID": {
+        "none": {
+          "reason": "only compared in the country lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:70"
+        }
+      }
+    },
+    "common-designation": {
+      "body.designation": {
+        "none": {
+          "reason": "only turned into a search regex for the designation lookup",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:370"
+        }
+      }
+    },
     "common-designations-by-profession": {
       "body.profession.professionID": {
         "minimum": {
@@ -223,12 +463,55 @@
         }
       }
     },
+    "common-domain": {
+      "body.countryID": {
+        "none": {
+          "reason": "only compared / looked up (country domain list)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:522"
+        }
+      },
+      "body.userType": {
+        "none": {
+          "reason": "only compared (BUSINESS / PERSONAL prefix)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:521"
+        }
+      }
+    },
+    "common-download-profile-image": {
+      "path.kpostID": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_AUDIT_MASTER.kpost_id varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1809"
+        }
+      }
+    },
+    "common-forgot-password-otp": {
+      "body.kpostID": {
+        "none": {
+          "reason": "only looked up (getPassword by kpostID or mobile number)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/UserProfileServiceImpl.java:101"
+        }
+      },
+      "body.requestType": {
+        "none": {
+          "reason": "only compared to kpostID / accessCode / password",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/UserProfileServiceImpl.java:103"
+        }
+      }
+    },
     "common-forgot-password-update": {
       "body.forgotPassword": {
         "minLength": {
           "value": 8,
           "from": "bean-validation",
           "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:32"
+        }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "only looked up and used in the password UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/UserProfileServiceImpl.java:546"
         }
       },
       "body.mobileNumber": {
@@ -244,12 +527,48 @@
         }
       }
     },
+    "common-generate-domain-and-unique-name": {
+      "body.companyName": {
+        "none": {
+          "reason": "only cut down to a 4-letter unique name, then looked up",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:273"
+        }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "only checked for presence; never used after (the DAO ignores it)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1092"
+        }
+      }
+    },
+    "common-is-company-name-exist": {
+      "body.companyName": {
+        "none": {
+          "reason": "only compared in the AdminRegistration lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:319"
+        }
+      }
+    },
     "common-kpost-id-using-module": {
       "body.module": {
         "minItems": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1660"
+        }
+      },
+      "body.module[]": {
+        "none": {
+          "reason": "only used in the lookup IN-list",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:346"
+        }
+      }
+    },
+    "common-languages": {
+      "body.countryID": {
+        "none": {
+          "reason": "only looked up (findByCountryID)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:483"
         }
       }
     },
@@ -275,6 +594,12 @@
       }
     },
     "common-mobile-no-exist-in-company": {
+      "body.companyID": {
+        "none": {
+          "reason": "only looked up (mobile number inside company)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:937"
+        }
+      },
       "body.mobileNumber": {
         "minLength": {
           "value": 7,
@@ -285,6 +610,30 @@
           "value": 12,
           "from": "bean-validation",
           "source": "src/main/java/com/webservice/kpost/entity/requestObject/MobileValidationRO.java:21"
+        }
+      }
+    },
+    "common-pincode": {
+      "body.postalCode": {
+        "none": {
+          "reason": "only compared in the postal lookup WHERE, then sent to the external postal API",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:158"
+        }
+      }
+    },
+    "common-postal-pincode": {
+      "body.postalCode": {
+        "none": {
+          "reason": "only compared in the postal lookup WHERE, then sent to the external postal API",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:158"
+        }
+      }
+    },
+    "common-remove-company-logo": {
+      "body.companyID": {
+        "none": {
+          "reason": "never read as spelled: the backend reads companyId, which is only an ownership lookup and the logo UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/controller/AdminController.java:423"
         }
       }
     },
@@ -353,6 +702,122 @@
         }
       }
     },
+    "common-send-message": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message LONGBLOB (4 GB): no practical column width; the request-size limit governs",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:180"
+        }
+      },
+      "body.groupFlag": {
+        "none": {
+          "reason": "a flag, normalized to true/false",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:176"
+        }
+      },
+      "body.messageTime": {
+        "none": {
+          "reason": "date/time; replaced by the server time before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:400"
+        }
+      },
+      "body.messageType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_type int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:185"
+        }
+      },
+      "body.receiver": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:191"
+        }
+      },
+      "body.selectedMembers": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.selected_members varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:201"
+        }
+      },
+      "body.sender": {
+        "none": {
+          "reason": "ignored: replaced by the logged-in kpostID from the token",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:890"
+        }
+      },
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time; replaced by the server time before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:401"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:188"
+        }
+      },
+      "body.sharedType": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.shared_type tinyint(1)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:219"
+        }
+      },
+      "body.status": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_status int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:186"
+        }
+      },
+      "body.subject": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.subject blob",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:187"
+        }
+      },
+      "body.temporaryMsgID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.temporary_msg_id int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:193"
+        }
+      }
+    },
+    "common-send-otp": {
+      "body.countryID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_OTP_VALIDATION.country_id int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:256"
+        }
+      },
+      "body.mobileNumber": {
+        "minLength": {
+          "value": 10,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:189"
+        },
+        "maxLength": {
+          "value": 10,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:189"
+        }
+      },
+      "body.requestType": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_OTP_VALIDATION.type varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:259"
+        }
+      }
+    },
     "common-send-otp-to-mail": {
       "body.otherEmail": {
         "maxLength": {
@@ -371,12 +836,103 @@
         }
       }
     },
+    "common-unique-name-exist": {
+      "body.companyName": {
+        "none": {
+          "reason": "only used to build name suggestions, each looked up",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:954"
+        }
+      },
+      "body.domain": {
+        "none": {
+          "reason": "only joined with uniqueName and looked up (existsByDomainName)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1388"
+        }
+      },
+      "body.uniqueName": {
+        "none": {
+          "reason": "only joined with domain and looked up (existsByDomainName)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1388"
+        }
+      }
+    },
     "common-update-company-logo": {
+      "body.companyID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1249"
+        }
+      },
       "body.text.companyID": {
         "minimum": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:1206"
+        }
+      }
+    },
+    "common-update-flutter-app-version": {
+      "body.currentVersion": {
+        "maxLength": {
+          "value": 20,
+          "from": "db-column TBL_KPOST_FLUTTER_VERSION.flutter_version varchar(20)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:208"
+        }
+      }
+    },
+    "common-user-details-by-mobile": {
+      "body.mobileNumber": {
+        "none": {
+          "reason": "only looked up (findPersonalUsersByMobileNumber)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:325"
+        }
+      }
+    },
+    "common-validate-mail-otp": {
+      "body.email": {
+        "none": {
+          "reason": "only compared in the mail-OTP lookup and status UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/repository/EmailOtpValidationRepository.java:15"
+        }
+      },
+      "body.otp": {
+        "none": {
+          "reason": "only compared in the mail-OTP lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/repository/EmailOtpValidationRepository.java:15"
+        }
+      },
+      "body.sendDate": {
+        "none": {
+          "reason": "date/time; only compared to the send/expire window",
+          "source": "src/main/java/com/webservice/kpost/repository/EmailOtpValidationRepository.java:15"
+        }
+      }
+    },
+    "common-validate-otp": {
+      "body.countryID": {
+        "none": {
+          "reason": "only compared in the OTP lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:98"
+        }
+      },
+      "body.mobileNumber": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_AUDIT_MASTER.kpost_id varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/controller/CommonControllerV2.java:282"
+        }
+      },
+      "body.otp": {
+        "none": {
+          "reason": "only compared in the OTP lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/CommonDaoImpl.java:99"
+        }
+      },
+      "body.sendDate": {
+        "none": {
+          "reason": "date/time; replaced by the server clock under the OTP bypass, else compared to the send/expire window",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/CommonServiceImpl.java:279"
         }
       }
     },
@@ -386,6 +942,18 @@
           "value": 50,
           "from": "db-column TBL_KPOST_USER_CONTACTS.contact_id varchar(50)",
           "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:519-524"
+        }
+      },
+      "body.firstName": {
+        "none": {
+          "reason": "not stored as sent: firstName is replaced by the contact's own value from the user record before the save",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:131-133,180-181,188"
+        }
+      },
+      "body.lastName": {
+        "none": {
+          "reason": "not stored as sent: lastName is replaced by the contact's own value from the user record before the save",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:131-133,180-181,188"
         }
       },
       "body.referenceName": {
@@ -431,14 +999,53 @@
           "from": "db-column TBL_KPOST_USER_CONTACTS.user_type varchar(45)",
           "source": "src/main/java/com/webservice/kpost/entity/contacts/Contacts.java:57"
         }
+      },
+      "body.contactID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_USER_CONTACTS.contact_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:191"
+        }
+      },
+      "body.firstName": {
+        "none": {
+          "reason": "not stored as sent: firstName is replaced by the contact's own value from the user record before the save",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:131-133,180-181,188"
+        }
+      },
+      "body.lastName": {
+        "none": {
+          "reason": "not stored as sent: lastName is replaced by the contact's own value from the user record before the save",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:131-133,180-181,188"
+        }
+      },
+      "body.userType": {
+        "none": {
+          "reason": "not stored as sent: userType is replaced by the contact's own value from the user record before the save",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:131-133,180-181,188"
+        }
       }
     },
     "contacts-add-reference": {
+      "body.contactID": {
+        "none": {
+          "reason": "only looked up (em.find) and compared in the UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:596-601"
+        }
+      },
       "body.referenceName": {
         "maxLength": {
           "value": 160,
           "from": "db-column TBL_KPOST_USER_CONTACTS.reference_name varchar(160)",
           "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:595-602"
+        }
+      }
+    },
+    "contacts-block": {
+      "body.contactID": {
+        "none": {
+          "reason": "only compared in the UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:584-587"
         }
       }
     },
@@ -449,18 +1056,190 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:1219-1224"
         }
+      },
+      "body.contactIDs[]": {
+        "none": {
+          "reason": "each id only compared in the UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:584-587"
+        }
+      }
+    },
+    "contacts-delete": {
+      "body.contactID": {
+        "none": {
+          "reason": "only compared in the UPDATE WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:574-577"
+        }
+      }
+    },
+    "contacts-global-search": {
+      "body.countryList[]": {
+        "none": {
+          "reason": "only used in an IN filter of the search query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:509-511"
+        }
+      },
+      "body.languageList[]": {
+        "none": {
+          "reason": "only used in an IN filter of the search query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:514-516"
+        }
+      },
+      "body.search": {
+        "none": {
+          "reason": "only matched with LIKE / SOUNDEX in the search query (and sent to the DetectLanguage service); never saved",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:451-481"
+        }
+      },
+      "body.userTypeList[]": {
+        "none": {
+          "reason": "only used in a LIKE filter of the search query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:519-523"
+        }
       }
     },
     "contacts-import-phone": {
+      "body.countryCode": {
+        "none": {
+          "reason": "never read by the service",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/PhoneContactsRO.java:33"
+        }
+      },
+      "body.deviceID": {
+        "none": {
+          "reason": "ignored: overwritten with the deviceID from the token (request attribute)",
+          "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:663"
+        }
+      },
+      "body.mobileNumber": {
+        "none": {
+          "reason": "never read by the service (only @NotEmpty and a no-spaces @Pattern, no length)",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/PhoneContactsRO.java:23-26"
+        }
+      },
       "body.phoneContacts": {
         "minItems": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:657-662"
         }
+      },
+      "body.phoneContacts[].countryCode": {
+        "none": {
+          "reason": "stored inside the JSON document column primary_phone_contacts (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/ContactsDirectoryServiceImpl.java:136,146,155-160"
+        }
+      },
+      "body.phoneContacts[].mobileNumber": {
+        "none": {
+          "reason": "looked up, then stored inside the JSON document column TBL_KPOST_USER_PHONECONTACT_DETAILS.primary_phone_contacts (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/ContactsDirectoryServiceImpl.java:119,135,145,155-160"
+        }
+      },
+      "body.phoneContacts[].name": {
+        "none": {
+          "reason": "stored inside the JSON document column primary_phone_contacts (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/ContactsDirectoryServiceImpl.java:133,142,155-160"
+        }
+      }
+    },
+    "contacts-search-details": {
+      "body.city": {
+        "none": {
+          "reason": "only compared in a WHERE of the distinct-values query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:294"
+        }
+      },
+      "body.country": {
+        "none": {
+          "reason": "only compared in a WHERE of the distinct-values query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:291-324"
+        }
+      },
+      "body.provienceName": {
+        "none": {
+          "reason": "only compared in a WHERE of the distinct-values query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:292-316"
+        }
+      },
+      "body.requestType": {
+        "none": {
+          "reason": "compared to the fixed list country/provienceName/state/city/areaName/pinCode (no length rule)",
+          "source": "src/main/java/com/webservice/kpost/controller/ContactsDirectoryControllerV2.java:891-901"
+        }
+      },
+      "body.state": {
+        "none": {
+          "reason": "only compared in a WHERE of the distinct-values query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/ContactsDirectoryDaoImpl.java:293-306"
+        }
+      }
+    },
+    "contacts-update-invite": {
+      "body.mobileNumber": {
+        "none": {
+          "reason": "only compared to the mobileNo of the stored imported contacts",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/ContactsDirectoryServiceImpl.java:764"
+        }
+      }
+    },
+    "dashboard-home-msgs": {
+      "body.lastMsgID": {
+        "none": {
+          "reason": "only compared (paging cursor)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/DashboardDaoImpl.java:405"
+        }
+      },
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp), only compared",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/DashboardDaoImpl.java:358"
+        }
+      }
+    },
+    "dashboard-home-new-msgs": {
+      "body.firstMsgID": {
+        "none": {
+          "reason": "only compared (paging cursor)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/DashboardDaoImpl.java:657"
+        }
+      },
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp), only compared",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/DashboardDaoImpl.java:654"
+        }
+      }
+    },
+    "dashboard-kall-history": {
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp), only compared",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/DashboardDaoImplV2.java:286"
+        }
+      }
+    },
+    "dashboard-katchup-msg": {
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp), only compared",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/DashboardDaoImpl.java:139"
+        }
       }
     },
     "group-add-user": {
+      "body.groupID": {
+        "none": {
+          "reason": "only looks the group up (group_id + caller is admin)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GroupServiceImpl.java:358"
+        }
+      },
+      "body.groupKpostID": {
+        "none": {
+          "reason": "presence check, then only addresses the add-member notification, which looks the group up by it and refuses an unknown id before saving",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:144-153"
+        }
+      },
       "body.memberDetails": {
         "minItems": {
           "value": 1,
@@ -468,11 +1247,32 @@
           "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:126-146"
         }
       },
+      "body.memberDetails[].createdBy": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.created_by varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:64"
+        }
+      },
       "body.memberDetails[].hasAdminAccess": {
         "maxLength": {
           "value": 2,
           "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.admin_access varchar(2)",
           "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:53-55"
+        }
+      },
+      "body.memberDetails[].kpostID": {
+        "maxLength": {
+          "value": 150,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.kpost_id varchar(150)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:41"
+        }
+      },
+      "body.memberDetails[].memberDesignation": {
+        "maxLength": {
+          "value": 350,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.member_designation varchar(350)",
+          "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:47"
         }
       },
       "body.memberDetails[].name": {
@@ -488,9 +1288,22 @@
           "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.privacy_status varchar(2)",
           "source": "src/main/java/com/webservice/kpost/entity/group/UserGroupMemberDetails.java:57-59"
         }
+      },
+      "body.memberDetails[].remarks": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USERGROUP_MEMBERDETAILS.remarks varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GroupServiceImpl.java:377,394-399"
+        }
       }
     },
     "group-admin-access": {
+      "body.groupID": {
+        "none": {
+          "reason": "only compared (UPDATE WHERE group_id = :groupID)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/GroupServiceDaoImpl.java:70-75"
+        }
+      },
       "body.hasAdminAccess": {
         "maxLength": {
           "value": 2,
@@ -505,11 +1318,23 @@
           "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:226-232"
         }
       },
+      "body.ids[]": {
+        "none": {
+          "reason": "only compared (UPDATE WHERE id IN (:ids))",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/GroupServiceDaoImpl.java:70-72"
+        }
+      },
       "body.kpostIDs": {
         "minItems": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:226-232"
+        }
+      },
+      "body.kpostIDs[]": {
+        "none": {
+          "reason": "only compared (UPDATE WHERE kpost_id IN (:kpostIDs))",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/GroupServiceDaoImpl.java:70-73"
         }
       }
     },
@@ -526,6 +1351,13 @@
           "value": 150,
           "from": "db-column TBL_KPOST_USERGROUP_MASTER.created_by varchar(150)",
           "source": "src/main/java/com/webservice/kpost/entity/group/UserGroup.java:76"
+        }
+      },
+      "body.groupKpostName": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_USERGROUP_MASTER.group_name blob",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GroupServiceImpl.java:141,179"
         }
       },
       "body.groupPicturePath": {
@@ -592,6 +1424,95 @@
         }
       }
     },
+    "group-delete": {
+      "body.groupID": {
+        "none": {
+          "reason": "only compared (membership lookup and UPDATE WHERE group_id)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/GroupServiceDaoImpl.java:254-255"
+        }
+      }
+    },
+    "group-details-by-id": {
+      "path.groupKpostID": {
+        "none": {
+          "reason": "only compared (active-member check, then a lookup)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GroupServiceImpl.java:744"
+        }
+      }
+    },
+    "group-download-full-image": {
+      "path.groupKpostID": {
+        "none": {
+          "reason": "only compared (active-member check) and used to build the S3 key",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:544-551"
+        }
+      },
+      "path.kpostID": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_AUDIT_MASTER.kpost_id varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:542"
+        }
+      }
+    },
+    "group-download-image": {
+      "path.groupKpostID": {
+        "none": {
+          "reason": "only compared (active-member check) and used to build the S3 key",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:515-522"
+        }
+      },
+      "path.kpostID": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_AUDIT_MASTER.kpost_id varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:513"
+        }
+      }
+    },
+    "group-edit-name": {
+      "body.groupKpostID": {
+        "none": {
+          "reason": "only compared (admin check, then UPDATE WHERE group_kpost_id)",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:582"
+        }
+      },
+      "body.groupKpostName": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_USERGROUP_MASTER.group_name blob",
+          "source": "src/main/java/com/webservice/kpost/repository/GroupRepository.java:116-117"
+        }
+      }
+    },
+    "group-leave": {
+      "body.groupID": {
+        "none": {
+          "reason": "only compared (admin lookup and UPDATE WHERE group_id)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/GroupServiceDaoImpl.java:233"
+        }
+      },
+      "body.groupKpostID": {
+        "none": {
+          "reason": "only addresses the group notification, which looks the group members up by it and refuses an unknown id before anything is saved",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:455-472"
+        }
+      },
+      "body.id": {
+        "none": {
+          "reason": "only compared (UPDATE ... WHERE userGroupMember.id = :id)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/GroupServiceDaoImpl.java:233"
+        }
+      }
+    },
+    "group-remove-image": {
+      "body.groupKpostID": {
+        "none": {
+          "reason": "only compared: the caller must be an active admin of that group",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:470"
+        }
+      }
+    },
     "group-remove-member": {
       "body.groupID": {
         "minimum": {
@@ -600,11 +1521,23 @@
           "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:172-177"
         }
       },
+      "body.groupKpostID": {
+        "none": {
+          "reason": "only addresses the group notification, which looks the group members up by it and refuses an unknown id before anything is saved",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:455-472"
+        }
+      },
       "body.memberKpostIdList": {
         "minItems": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:172-177"
+        }
+      },
+      "body.memberKpostIdList[]": {
+        "none": {
+          "reason": "only compared (kpost_id IN (...) in the count and the UPDATE WHERE)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/GroupServiceDaoImpl.java:191-205"
         }
       }
     },
@@ -614,6 +1547,12 @@
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:172-177"
+        }
+      },
+      "body.groupKpostID": {
+        "none": {
+          "reason": "only addresses the group notification, which looks the group members up by it and refuses an unknown id before anything is saved",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:455-472"
         }
       },
       "body.memberKpostIdList": {
@@ -632,6 +1571,12 @@
           "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:341,382-387"
         }
       },
+      "body.groupKpostID": {
+        "none": {
+          "reason": "only compared: the caller must be an active admin of that group (checked before the S3 upload and the UPDATE)",
+          "source": "src/main/java/com/webservice/kpost/controller/GroupControllerV2.java:379"
+        }
+      },
       "body.text.groupKpostID": {
         "maxLength": {
           "value": 200,
@@ -647,14 +1592,59 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:174"
         }
+      },
+      "body.kallIds[]": {
+        "minimum": {
+          "value": 0,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:207-208"
+        }
+      }
+    },
+    "kall-contact-info": {
+      "body.contactID": {
+        "none": {
+          "reason": "only looked up (findByKpostID, contact lookup)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:514"
+        }
+      }
+    },
+    "kall-dashboard": {
+      "body.kallID": {
+        "none": {
+          "reason": "only compared (kallID < :kallID paging filter)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:539"
+        }
+      }
+    },
+    "kall-end-individual": {
+      "body.kallID": {
+        "none": {
+          "reason": "only compared (UPDATE ... WHERE kall_id = :kallid)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:618-625"
+        }
       }
     },
     "kall-end-kool": {
+      "body.id": {
+        "none": {
+          "reason": "only compared (UPDATE KallDetails ... WHERE id = :id AND receiver = :receiver)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:156"
+        }
+      },
       "body.kallID": {
         "minimum": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:441"
+        }
+      }
+    },
+    "kall-fetch-scheduled-repeat": {
+      "body.scheduledStartTime": {
+        "none": {
+          "reason": "a date/time, only used as the day filter of the lookup",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:894-895"
         }
       }
     },
@@ -665,6 +1655,18 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:994"
         }
+      },
+      "body.receiver": {
+        "none": {
+          "reason": "only compared (kall status lookup by kallID/sender/receiver)",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:1063-1066"
+        }
+      },
+      "body.sender": {
+        "none": {
+          "reason": "only compared (kall status lookup by kallID/sender/receiver)",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:1063-1066"
+        }
       }
     },
     "kall-get-status-by-id": {
@@ -674,9 +1676,30 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:1096"
         }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "overwritten from the login token; the body value is never read",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:1146"
+        }
+      }
+    },
+    "kall-info": {
+      "body.contactID": {
+        "none": {
+          "reason": "only compared (sender/receiver = :contactID)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:698-709"
+        }
       }
     },
     "kall-initiate": {
+      "body.kallMode": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_mode tinyint",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:146,168"
+        }
+      },
       "body.kallSession": {
         "maxLength": {
           "value": 120,
@@ -684,11 +1707,88 @@
           "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:46"
         }
       },
+      "body.kallStartTime": {
+        "none": {
+          "reason": "never read (the set is commented out); a date/time",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:175"
+        }
+      },
+      "body.kallStatus": {
+        "none": {
+          "reason": "never read: the sender/receiver statuses are computed by the server",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:132-133,178-181"
+        }
+      },
+      "body.kallType": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_type tinyint",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:146,170"
+        }
+      },
       "body.receiver": {
         "maxLength": {
           "value": 50,
           "from": "db-column TBL_KPOST_KOOL_KALL_DETAILS.receiver varchar(50)",
           "source": "src/main/java/com/webservice/kpost/entity/kall/KallDetails.java:30"
+        }
+      }
+    },
+    "kall-join-schedule": {
+      "body.id": {
+        "none": {
+          "reason": "only compared (UPDATE KallDetails ... WHERE id = :id AND receiver = :receiver)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:118"
+        }
+      },
+      "body.kallID": {
+        "none": {
+          "reason": "only compared (UPDATE KallMaster ... WHERE kallID = :kallid AND sender = :sender)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:124"
+        }
+      }
+    },
+    "kall-legacy-cancel-schedule": {
+      "body.kallEndTime": {
+        "none": {
+          "reason": "never read: kall_end_time is set by the server",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImpl.java:123-128"
+        }
+      },
+      "body.kallID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallController.java:474"
+        }
+      },
+      "body.kallStatus": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_KALL_TRACKERS.kall_status varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImpl.java:120-121"
+        }
+      }
+    },
+    "kall-legacy-set-status": {
+      "body.kallEndTime": {
+        "none": {
+          "reason": "never read: kall_end_time is set by the server",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImpl.java:123-128"
+        }
+      },
+      "body.kallID": {
+        "minimum": {
+          "value": 1,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallController.java:145"
+        }
+      },
+      "body.kallStatus": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_KALL_TRACKERS.kall_status varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImpl.java:120-121"
         }
       }
     },
@@ -706,6 +1806,12 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:527"
         }
+      },
+      "body.removingUserIds[]": {
+        "none": {
+          "reason": "only compared with the existing receivers (an unknown one is refused as 400)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:264-267"
+        }
       }
     },
     "kall-reschedule": {
@@ -716,6 +1822,13 @@
           "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:636"
         }
       },
+      "body.kallDetails[].receiver": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KOOL_KALL_DETAILS.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:484"
+        }
+      },
       "body.kallID": {
         "minimum": {
           "value": 1,
@@ -723,11 +1836,55 @@
           "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:647"
         }
       },
+      "body.kallMode": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_mode tinyint",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:484"
+        }
+      },
       "body.kallSession": {
         "maxLength": {
           "value": 120,
           "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_session varchar(120)",
           "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:46"
+        }
+      },
+      "body.meetingLink": {
+        "none": {
+          "reason": "saved to TBL_KPOST_KOOL_KALL_MASTER.meeting_link longtext (4 GB): no practical width, and no length check on this route",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:55"
+        }
+      },
+      "body.repeatedDate": {
+        "none": {
+          "reason": "saved to TBL_KPOST_KOOL_KALL_MASTER.repeat_date json: no width, only JSON validity",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:84"
+        }
+      },
+      "body.repeatType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.repeat_type int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:484"
+        }
+      },
+      "body.scheduledEndTime": {
+        "none": {
+          "reason": "a date/time, saved as a timestamp",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:484"
+        }
+      },
+      "body.scheduledStartTime": {
+        "none": {
+          "reason": "a date/time (only required)",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:692"
+        }
+      },
+      "body.subject": {
+        "none": {
+          "reason": "saved to TBL_KPOST_KOOL_KALL_MASTER.subject longtext (4 GB): no practical width, and no length check on this route",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:43"
         }
       }
     },
@@ -746,6 +1903,13 @@
           "source": "src/main/java/com/webservice/kpost/entity/kall/KallDetails.java:30"
         }
       },
+      "body.kallMode": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_mode tinyint",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:242"
+        }
+      },
       "body.kallSession": {
         "maxLength": {
           "value": 120,
@@ -759,6 +1923,37 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/util/KallInputValidator.java:24"
         }
+      },
+      "body.repeatedDate": {
+        "none": {
+          "reason": "saved to TBL_KPOST_KOOL_KALL_MASTER.repeat_date json: no width, only JSON validity",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:84"
+        }
+      },
+      "body.repeatType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.repeat_type int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:242"
+        }
+      },
+      "body.scheduledEndTime": {
+        "none": {
+          "reason": "a date/time (only required and ordered after scheduledStartTime)",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:368-373"
+        }
+      },
+      "body.scheduledStartTime": {
+        "none": {
+          "reason": "a date/time (only required and ordered before scheduledEndTime)",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:368-373"
+        }
+      },
+      "body.subject": {
+        "none": {
+          "reason": "saved to TBL_KPOST_KOOL_KALL_MASTER.subject longtext (4 GB): no practical width, and no length check on this route",
+          "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:43"
+        }
       }
     },
     "kall-scheduled-repeat": {
@@ -769,11 +1964,102 @@
           "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:603"
         }
       },
+      "body.kallMode": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_mode tinyint",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:641,684"
+        }
+      },
       "body.kallSession": {
         "maxLength": {
           "value": 120,
           "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.kall_session varchar(120)",
           "source": "src/main/java/com/webservice/kpost/entity/kall/KallMaster.java:46"
+        }
+      },
+      "body.meetingLink": {
+        "none": {
+          "reason": "saved to TBL_KPOST_KOOL_KALL_MASTER.meeting_link longtext (4 GB): no practical width, and no length check on this route",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:645"
+        }
+      },
+      "body.repeatedDate": {
+        "none": {
+          "reason": "only parsed for its end_date (series end); never saved",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:604-609"
+        }
+      },
+      "body.repeatType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KOOL_KALL_MASTER.repeat_type int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:648,684"
+        }
+      },
+      "body.scheduledEndTime": {
+        "none": {
+          "reason": "a date/time (@Future), saved as a timestamp",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:647"
+        }
+      },
+      "body.scheduledStartTime": {
+        "none": {
+          "reason": "a date/time (@FutureOrPresent), saved as a timestamp",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:646"
+        }
+      },
+      "body.subject": {
+        "none": {
+          "reason": "saved to KOOL_KALL_MASTER.subject longtext and KDIARY_SCHEDULE.title mediumtext: no practical width, and no length check on this route",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KallServiceImplV3.java:643,704"
+        }
+      }
+    },
+    "kall-update-sender-receiver-status": {
+      "body.kallID": {
+        "none": {
+          "reason": "only compared (WHERE kallID = :kallid)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:89-96"
+        }
+      },
+      "body.kallStatus": {
+        "minimum": {
+          "value": 2,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:1108"
+        },
+        "maximum": {
+          "value": 10,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KallControllerV3.java:1108"
+        }
+      },
+      "body.sender": {
+        "none": {
+          "reason": "only compared (UPDATE ... WHERE sender = :sender)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:89-92"
+        }
+      }
+    },
+    "kall-update-status": {
+      "body.id": {
+        "none": {
+          "reason": "only compared (UPDATE KallDetails ... WHERE id = :id AND receiver = :receiver)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:82"
+        }
+      },
+      "body.kallID": {
+        "none": {
+          "reason": "only compared (WHERE kallID = :kallid, findById)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:89-96"
+        }
+      },
+      "body.kallStatus": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KOOL_KALL_DETAILS.receiver_kall_status tinyint (sender_kall_status tinyint when id is 0)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KallDaoImplV3.java:82-83,89-90"
         }
       }
     },
@@ -783,6 +2069,60 @@
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1722"
+        }
+      }
+    },
+    "katchup-conversation": {
+      "body.receiver": {
+        "none": {
+          "reason": "only compared in a WHERE (receiver = selected contact)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KatchupDaoImpl.java:122"
+        }
+      }
+    },
+    "katchup-download": {
+      "path.uuid": {
+        "none": {
+          "reason": "only looked up (canAccessAttachment / findByUuid)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1500"
+        }
+      }
+    },
+    "katchup-download-attachment": {
+      "path.uuid": {
+        "none": {
+          "reason": "only looked up (findByUuid / canAccessAttachment)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2388"
+        }
+      }
+    },
+    "katchup-download-from-s3": {
+      "path.uuid": {
+        "none": {
+          "reason": "only looked up (findByUuid)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1513"
+        }
+      }
+    },
+    "katchup-download-thumbnail": {
+      "path.uuid": {
+        "none": {
+          "reason": "only looked up (canAccessAttachment / findByUuid)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1472"
+        }
+      }
+    },
+    "katchup-filter-message": {
+      "body.messageBy": {
+        "none": {
+          "reason": "only compared to All/sent/received (anything else → 400); no length rule",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:2002"
+        }
+      },
+      "body.selectedContact": {
+        "none": {
+          "reason": "not a field of KatchupFilterRO; never read",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/KatchupFilterRO.java:8"
         }
       }
     },
@@ -796,34 +2136,194 @@
       }
     },
     "katchup-forward-message": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message longblob (no practical width limit)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:180"
+        }
+      },
+      "body.attachmentCaption": {
+        "none": {
+          "reason": "parsed as a JSON array of captions (bad JSON → 400); the captions are stored in the attachment_caption_details json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1365"
+        }
+      },
       "body.files": {
-        "minLength": {
-          "value": 1,
-          "from": "service-check",
-          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1391"
+        "none": {
+          "reason": "an optional multipart part (required = false); an empty or missing one is skipped, so it has no length rule",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1369"
+        }
+      },
+      "body.forwardReceiverList[]": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1983"
+        }
+      },
+      "body.groupFlag": {
+        "none": {
+          "reason": "flag: GroupFlagDeserializer normalizes it; the forward branch is chosen by groupForwardList",
+          "source": "src/main/java/com/webservice/kpost/util/GroupFlagDeserializer.java:28"
+        }
+      },
+      "body.messageType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_type int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:185"
+        }
+      },
+      "body.receiver": {
+        "none": {
+          "reason": "replaced by each forwardReceiverList entry (or group id) before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1983"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:188"
+        }
+      },
+      "body.sharedType": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.shared_type tinyint(1)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:219"
+        }
+      },
+      "body.status": {
+        "none": {
+          "reason": "replaced by MESSAGE_STATUS_SENT / GROUPINFO before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1984"
+        }
+      },
+      "body.subject": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.subject blob",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:187"
+        }
+      },
+      "body.temporaryMsgID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.temporary_msg_id int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:193"
         }
       }
     },
     "katchup-forward-message-new": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message longblob (no practical width limit)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:180"
+        }
+      },
+      "body.attachmentCaption": {
+        "none": {
+          "reason": "parsed as a JSON array of captions (bad JSON → 400); the captions are stored in the attachment_caption_details json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1685"
+        }
+      },
       "body.forwardReceiverList[]": {
         "minLength": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1636"
         }
+      },
+      "body.groupFlag": {
+        "none": {
+          "reason": "flag: GroupFlagDeserializer normalizes it; the forward branch is chosen by groupForwardList",
+          "source": "src/main/java/com/webservice/kpost/util/GroupFlagDeserializer.java:28"
+        }
+      },
+      "body.messageType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_type int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:185"
+        }
+      },
+      "body.receiver": {
+        "none": {
+          "reason": "replaced by each forwardReceiverList entry (or group id) before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1983"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:188"
+        }
+      },
+      "body.sharedType": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.shared_type tinyint(1)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:219"
+        }
+      },
+      "body.status": {
+        "none": {
+          "reason": "replaced by MESSAGE_STATUS_SENT / GROUPINFO before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1984"
+        }
+      },
+      "body.subject": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.subject blob",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:187"
+        }
+      },
+      "body.temporaryMsgID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.temporary_msg_id int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:193"
+        }
+      },
+      "body.uuid[]": {
+        "none": {
+          "reason": "only looked up (getFileNameAndSizeUsingUuids); the list is stored in the attachment_path json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1716"
+        }
       }
     },
     "katchup-forward-multiple": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message longblob (no practical width limit)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:180"
+        }
+      },
+      "body.attachmentCaption": {
+        "none": {
+          "reason": "parsed as a JSON array of captions (bad JSON → 400); the captions are stored in the attachment_caption_details json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:2278"
+        }
+      },
       "body.forwardMessageIDList": {
         "minItems": {
           "value": 1,
           "from": "service-check",
-          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2464"
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2533-2534"
         },
         "maxItems": {
-          "value": 5,
-          "from": "service-check",
-          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2476"
+          "value": 9,
+          "from": "service-check (messageType 15, the type the web app and the bench send; type 16 allows 5)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2537-2538"
+        }
+      },
+      "body.forwardMessageIDList[]": {
+        "none": {
+          "reason": "only looked up (countAccessibleMessages / getKatchupMsgByMsgID)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2553"
         }
       },
       "body.forwardReceiverList": {
@@ -837,6 +2337,68 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2473"
         }
+      },
+      "body.forwardReceiverList[]": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1983"
+        }
+      },
+      "body.messageType": {
+        "minimum": {
+          "value": 15,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2531"
+        },
+        "maximum": {
+          "value": 16,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2531"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:188"
+        }
+      },
+      "body.uuid[]": {
+        "none": {
+          "reason": "only looked up (getFileNameAndSizeUsingUuids); the list is stored in the attachment_path json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:2304"
+        }
+      }
+    },
+    "katchup-generate-thumbnail": {
+      "body.uuid[]": {
+        "none": {
+          "reason": "only looked up (getFileNameAndSizeUsingUuids; thumbnails are generated from the stored attachments)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:2536"
+        }
+      }
+    },
+    "katchup-global-search": {
+      "body.keyWord": {
+        "none": {
+          "reason": "only used in a LIKE pattern (trimmed)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2839"
+        }
+      }
+    },
+    "katchup-legacy-recall-message": {
+      "body.msgID": {
+        "none": {
+          "reason": "only compared in the UPDATE's WHERE",
+          "source": "src/main/java/com/webservice/kpost/repository/KatchupRepository.java:41"
+        }
+      },
+      "body.sender": {
+        "none": {
+          "reason": "only compared in the UPDATE's WHERE (sender = :kpostID)",
+          "source": "src/main/java/com/webservice/kpost/repository/KatchupRepository.java:41"
+        }
       }
     },
     "katchup-mark-important": {
@@ -848,12 +2410,93 @@
         }
       }
     },
+    "katchup-media-streaming": {
+      "path.uuid": {
+        "none": {
+          "reason": "only looked up (canAccessAttachment / findByUuid)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1822"
+        }
+      }
+    },
+    "katchup-message-count": {
+      "body.groupFlag": {
+        "none": {
+          "reason": "flag: must be true/false (GroupFlagDeserializer + controller check), only picks the query",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1951"
+        }
+      },
+      "body.receiver": {
+        "none": {
+          "reason": "only compared in a WHERE (COUNT query)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KatchupDaoImpl.java:598"
+        }
+      }
+    },
+    "katchup-messages-by-reference": {
+      "body.messageType": {
+        "none": {
+          "reason": "only compared (20/21 picks the branch)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2083"
+        }
+      },
+      "body.referenceMessageList": {
+        "none": {
+          "reason": "only parsed as JSON into msg ids for a lookup",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2084"
+        }
+      }
+    },
+    "katchup-messages-subject": {
+      "path.id": {
+        "none": {
+          "reason": "only compared in a WHERE (sender/receiver of the subject query)",
+          "source": "src/main/java/com/webservice/kpost/repository/KatchupRepository.java:36"
+        }
+      }
+    },
+    "katchup-old-download": {
+      "path.uuid": {
+        "none": {
+          "reason": "only looked up (canAccessAttachment / findByUuid)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1472"
+        }
+      }
+    },
     "katchup-read-status-group": {
       "body.msgID": {
         "minimum": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:784"
+        }
+      }
+    },
+    "katchup-recall-message": {
+      "body.msgID": {
+        "none": {
+          "reason": "only compared in the UPDATE's WHERE",
+          "source": "src/main/java/com/webservice/kpost/repository/KatchupRepository.java:41"
+        }
+      },
+      "body.status": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_status int",
+          "source": "src/main/java/com/webservice/kpost/repository/KatchupRepository.java:41"
+        }
+      }
+    },
+    "katchup-reference-details": {
+      "body.referenceMessageIDList[]": {
+        "none": {
+          "reason": "only looked up (findAllById; the @Size cap on the RO is not enforced here, no @Valid)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2198"
+        }
+      },
+      "body.sourceMsgID": {
+        "none": {
+          "reason": "only looked up (findMessageTimeByMsgID)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:2184"
         }
       }
     },
@@ -872,6 +2515,12 @@
           "source": "src/main/java/com/webservice/kpost/entity/katchup/ReportDetails.java:31"
         }
       },
+      "body.reportID[]": {
+        "none": {
+          "reason": "not a field of ReportDetailsRO (the backend reads reportCode); never read",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/ReportDetailsRO.java:13"
+        }
+      },
       "body.reportingKpostID": {
         "maxLength": {
           "value": 50,
@@ -880,12 +2529,97 @@
         }
       }
     },
+    "katchup-save-messages": {
+      "body.groupFlag": {
+        "none": {
+          "reason": "flag: GroupFlagDeserializer, then compared to \"true\"",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KatchupDaoImpl.java:463"
+        }
+      },
+      "body.groupKpostID": {
+        "none": {
+          "reason": "only compared in a WHERE (group branch only)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KatchupDaoImpl.java:467"
+        }
+      },
+      "body.msgIDs[]": {
+        "none": {
+          "reason": "only compared (msg_id NOT IN …)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KatchupDaoImpl.java:466"
+        }
+      }
+    },
+    "katchup-search-message": {
+      "body.searchMessage": {
+        "none": {
+          "reason": "only used in a LIKE pattern",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KatchupDaoImpl.java:324"
+        }
+      }
+    },
+    "katchup-search-subject": {
+      "body.searchMessage": {
+        "none": {
+          "reason": "only used in a LIKE pattern",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KatchupDaoImpl.java:361"
+        }
+      },
+      "body.selectedContact": {
+        "none": {
+          "reason": "only compared in a WHERE (receiver = :receiver)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/KatchupDaoImpl.java:360"
+        }
+      }
+    },
     "katchup-send-bulk": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message longblob (no practical width limit)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:180"
+        }
+      },
+      "body.attachmentCaption": {
+        "none": {
+          "reason": "parsed as a JSON array of captions (bad JSON → 400); the captions are stored in the attachment_caption_details json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1808"
+        }
+      },
+      "body.mapDetails": {
+        "none": {
+          "reason": "saved to TBL_KPOST_SHARED_DETAILS.map_details varchar(255) only when messageType is 22 or 23; this request sends 19 (bulk), so it is never read",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1727"
+        }
+      },
+      "body.messageTime": {
+        "none": {
+          "reason": "date/time (Timestamp); replaced by the server clock before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1677"
+        }
+      },
+      "body.messageType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_type int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:185"
+        }
+      },
       "body.receiverList": {
         "minItems": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1592"
+        }
+      },
+      "body.receiverList[]": {
+        "none": {
+          "reason": "only looked up (findBykpostIDIn); the saved receiver is the matched user's kpostID",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1674"
+        }
+      },
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp); replaced by the server clock before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1678"
         }
       },
       "body.sessionID": {
@@ -894,14 +2628,106 @@
           "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
           "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupMessages.java:60"
         }
+      },
+      "body.status": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_status int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:186"
+        }
+      },
+      "body.subject": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.subject blob",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:187"
+        }
+      },
+      "body.temporaryMsgID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.temporary_msg_id int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1633"
+        }
+      },
+      "body.uuid[]": {
+        "none": {
+          "reason": "only looked up (getFileNameAndSizeUsingUuids); the list is stored in the attachment_path json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1840"
+        }
       }
     },
     "katchup-send-bulk-multipart": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message longblob (no practical width limit)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:361"
+        }
+      },
+      "body.attachmentCaption": {
+        "none": {
+          "reason": "parsed as a JSON array of captions (bad JSON → 400); the captions are stored in the attachment_caption_details json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1207"
+        }
+      },
       "body.files": {
         "minLength": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:1231"
+        }
+      },
+      "body.messageTime": {
+        "none": {
+          "reason": "date/time (Timestamp); replaced by the server clock before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1677"
+        }
+      },
+      "body.messageType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_type int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:365"
+        }
+      },
+      "body.receiverList[]": {
+        "none": {
+          "reason": "only looked up (findBykpostIDIn); the saved receiver is the matched user's kpostID",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1674"
+        }
+      },
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp); replaced by the server clock before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1678"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:368"
+        }
+      },
+      "body.status": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_status int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:366"
+        }
+      },
+      "body.subject": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.subject blob",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:367"
+        }
+      },
+      "body.temporaryMsgID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.temporary_msg_id int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1633"
         }
       },
       "body.text.receiverList": {
@@ -913,6 +2739,92 @@
       }
     },
     "katchup-send-forward-selected-attachment": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message longblob (no practical width limit)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:361"
+        }
+      },
+      "body.attachmentCaption": {
+        "none": {
+          "reason": "parsed as a JSON array of captions (bad JSON → 400); the captions are stored in the attachment_caption_details json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:304"
+        }
+      },
+      "body.messageTime": {
+        "none": {
+          "reason": "date/time (Timestamp), no width rule",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:400"
+        }
+      },
+      "body.messageType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_type int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:365"
+        }
+      },
+      "body.receiver": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:371"
+        }
+      },
+      "body.selectedMembers": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.selected_members varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:381"
+        }
+      },
+      "body.sender": {
+        "none": {
+          "reason": "replaced by the caller's kpostID from the token",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:378"
+        }
+      },
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp), no width rule",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:401"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:368"
+        }
+      },
+      "body.sharedType": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.shared_type tinyint(1)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:399"
+        }
+      },
+      "body.status": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_status int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:366"
+        }
+      },
+      "body.subject": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.subject blob",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:367"
+        }
+      },
+      "body.temporaryMsgID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.temporary_msg_id int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:373"
+        }
+      },
       "body.uuid[]": {
         "minLength": {
           "value": 1,
@@ -922,11 +2834,36 @@
       }
     },
     "katchup-send-message": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message longblob (no practical width limit)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:243"
+        }
+      },
       "body.deviceID": {
         "maxLength": {
           "value": 255,
           "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.device_id varchar(255)",
           "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupMessages.java:57"
+        }
+      },
+      "body.groupFlag": {
+        "none": {
+          "reason": "flag: GroupFlagDeserializer normalizes it to \"true\"/\"false\" (anything else → 400); stored as the group_flag boolean",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:176"
+        }
+      },
+      "body.messageTime": {
+        "none": {
+          "reason": "date/time (Timestamp); replaced by the server clock before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:400"
+        }
+      },
+      "body.messageType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_type int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:185"
         }
       },
       "body.receiver": {
@@ -941,6 +2878,19 @@
           "value": 119,
           "from": "bean-validation",
           "source": "src/main/java/com/webservice/kpost/entity/requestObject/KatchupMessageRO.java:74"
+        }
+      },
+      "body.selectedMembers": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.selected_members varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:201"
+        }
+      },
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp); replaced by the server clock before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:401"
         }
       },
       "body.sessionID": {
@@ -963,9 +2913,49 @@
           "from": "bean-validation",
           "source": "src/main/java/com/webservice/kpost/util/SharedMessageDetailsValidator.java:24"
         }
+      },
+      "body.sharedType": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.shared_type tinyint(1)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:219"
+        }
+      },
+      "body.status": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_status int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:186"
+        }
+      },
+      "body.subject": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.subject blob",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:187"
+        }
+      },
+      "body.temporaryMsgID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.temporary_msg_id int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:193"
+        }
       }
     },
     "katchup-send-multipart": {
+      "body.actualMessage": {
+        "none": {
+          "reason": "saved into actual_message longblob (no practical width limit)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:361"
+        }
+      },
+      "body.attachmentCaption": {
+        "none": {
+          "reason": "parsed as a JSON array of captions (bad JSON → 400); the captions are stored in the attachment_caption_details json column (no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/KatchupControllerV2.java:919"
+        }
+      },
       "body.files": {
         "minLength": {
           "value": 1,
@@ -979,6 +2969,67 @@
           "from": "db-column TBL_KPOST_KATCHUP_ATTACHMENT.original_file_name varchar(400)",
           "source": "src/main/java/com/webservice/kpost/entity/katchup/KatchupAttachment.java:30"
         }
+      },
+      "body.messageTime": {
+        "none": {
+          "reason": "date/time (Timestamp); replaced by the server clock before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:400"
+        }
+      },
+      "body.messageType": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_type int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:365"
+        }
+      },
+      "body.receiver": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.receiver varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:371"
+        }
+      },
+      "body.serverTime": {
+        "none": {
+          "reason": "date/time (Timestamp); replaced by the server clock before the save",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:401"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.session_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:368"
+        }
+      },
+      "body.sharedType": {
+        "maximum": {
+          "value": 127,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.shared_type tinyint(1)",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:399"
+        }
+      },
+      "body.status": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.message_status int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:366"
+        }
+      },
+      "body.subject": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.subject blob",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:367"
+        }
+      },
+      "body.temporaryMsgID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KATCHUP_MESSAGES.temporary_msg_id int",
+          "source": "src/main/java/com/webservice/kpost/util/KpostWelcomeMailAndMessage.java:373"
+        }
       }
     },
     "katchup-shared-message-info": {
@@ -987,6 +3038,14 @@
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/serviceimpl/KatchupServiceImpl.java:1196"
+        }
+      }
+    },
+    "katchup-voice-translate": {
+      "body.uuid": {
+        "none": {
+          "reason": "only looked up (findByUuid)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/VoiceController.java:38"
         }
       }
     },
@@ -1004,9 +3063,180 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:228"
         }
+      },
+      "body.travelDate": {
+        "none": {
+          "reason": "a date (yyyy-MM-dd, today or later), sent to the RedBus API; never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:264-294"
+        }
+      }
+    },
+    "kbooking-block-ticket": {
+      "body.availableTripId": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525"
+        }
+      },
+      "body.boardingPointId": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525"
+        }
+      },
+      "body.destination": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525"
+        }
+      },
+      "body.inventoryItems[].fare": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.address": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.age": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.email": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.gender": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.idNumber": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.idType": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.mobile": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.name": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.primary": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.seatName": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.inventoryItems[].passenger.title": {
+        "none": {
+          "reason": "sent to the RedBus API; locally only stored inside the whole inventoryItems JSON document in TBL_KPOST_TICKETBOOKING_DETAILS.PASSENGERINFORMATION (json, no width)",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525,820-821"
+        }
+      },
+      "body.source": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:525"
+        }
+      },
+      "path.kpostId": {
+        "none": {
+          "reason": "only compared: must equal the kpostID of the login token",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:512"
+        }
+      }
+    },
+    "kbooking-boarding-point": {
+      "body.boardingID": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:458-459"
+        }
+      },
+      "body.tripID": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:458-459"
+        }
+      }
+    },
+    "kbooking-city-suggestion": {
+      "path.query": {
+        "none": {
+          "reason": "only looked up (city-name suggestion search)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/integration/RedBusIntegrationServiceImpl.java:40-41"
+        }
+      }
+    },
+    "kbooking-destinations": {
+      "body.sourceCityID": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:217"
+        }
+      }
+    },
+    "kbooking-trip-details": {
+      "body.tripID": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:359,389"
+        }
+      }
+    },
+    "kbooking-trip-details-v2": {
+      "body.inventoryId": {
+        "none": {
+          "reason": "sent to the RedBus API (outside service); never saved",
+          "source": "src/main/java/com/webservice/kpost/controller/integration/RedBusIntegrationController.java:421"
+        }
+      }
+    },
+    "kdiary-add-participants": {
+      "body.eventID": {
+        "none": {
+          "reason": "only compared (owner check, findByEventID)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:387-390"
+        }
       }
     },
     "kdiary-create-event": {
+      "body.description": {
+        "maxLength": {
+          "value": 16000,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:98,114"
+        }
+      },
       "body.kallSession": {
         "maxLength": {
           "value": 120,
@@ -1021,11 +3251,162 @@
           "source": "src/main/java/com/webservice/kpost/entity/kdiary/ScheduleParticipant.java:29"
         }
       },
+      "body.priority": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KDIARY_SCHEDULE.priority int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:143,176"
+        }
+      },
+      "body.remarksDescription": {
+        "maxLength": {
+          "value": 16000,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:99,115"
+        }
+      },
+      "body.scheduleEndDateAndTime": {
+        "none": {
+          "reason": "a date/time, saved as a timestamp (only ordered start <= end)",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:312-313"
+        }
+      },
+      "body.scheduleStartDateAndTime": {
+        "none": {
+          "reason": "a date/time, saved as a timestamp (only ordered start <= end)",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:312-313"
+        }
+      },
       "body.snoozeDetails": {
         "maxLength": {
           "value": 255,
           "from": "db-column TBL_KPOST_KDIARY_SCHEDULE.snooze_details varchar(255)",
           "source": "src/main/java/com/webservice/kpost/entity/kdiary/DiarySchedule.java:63"
+        }
+      },
+      "body.title": {
+        "maxLength": {
+          "value": 500,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:97,113"
+        }
+      }
+    },
+    "kdiary-create-schedule": {
+      "body.description": {
+        "maxLength": {
+          "value": 16000,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:98,114"
+        }
+      },
+      "body.priority": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KDIARY_SCHEDULE.priority int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:74"
+        }
+      },
+      "body.remarksDescription": {
+        "maxLength": {
+          "value": 16000,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:99,115"
+        }
+      },
+      "body.scheduleEndDateAndTime": {
+        "none": {
+          "reason": "a date/time, saved as a timestamp (only ordered start <= end)",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:166-167"
+        }
+      },
+      "body.scheduleStartDateAndTime": {
+        "none": {
+          "reason": "a date/time, saved as a timestamp (only ordered start <= end)",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:166-167"
+        }
+      },
+      "body.title": {
+        "maxLength": {
+          "value": 500,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:97,113"
+        }
+      }
+    },
+    "kdiary-delete-event": {
+      "body.eventID": {
+        "none": {
+          "reason": "only compared (owner check, delete by event_id)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:372-375"
+        }
+      }
+    },
+    "kdiary-delete-report": {
+      "body.id": {
+        "none": {
+          "reason": "only compared (findByIdAndCreatedBy, deleteById)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:508,525"
+        }
+      }
+    },
+    "kdiary-edit-report": {
+      "body.id": {
+        "none": {
+          "reason": "only compared (findByIdAndCreatedBy)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:463"
+        }
+      },
+      "body.taskReport": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KDIARY_REPORT.task_report blob",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:483-488"
+        }
+      }
+    },
+    "kdiary-edit-schedule-event": {
+      "body.description": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KDIARY_SCHEDULE.description blob",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:596-597"
+        }
+      },
+      "body.eventID": {
+        "none": {
+          "reason": "only compared (owner check, findByEventID)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:584-590"
+        }
+      },
+      "body.priority": {
+        "none": {
+          "reason": "never read: editScheduleEvent does not copy priority",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:594-621"
+        }
+      },
+      "body.remarksDescription": {
+        "none": {
+          "reason": "never read: editScheduleEvent does not copy remarksDescription",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:594-621"
+        }
+      },
+      "body.scheduleEndDateAndTime": {
+        "none": {
+          "reason": "a date/time, saved as a timestamp",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:600-601"
+        }
+      },
+      "body.scheduleStartDateAndTime": {
+        "none": {
+          "reason": "a date/time, saved as a timestamp",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:598-599"
+        }
+      },
+      "body.title": {
+        "none": {
+          "reason": "saved to TBL_KPOST_KDIARY_SCHEDULE.title mediumtext (16 MB): no practical width, and no length check on this route",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:594-595"
         }
       }
     },
@@ -1052,6 +3433,107 @@
           "value": 4102444799999,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/KdiaryScheduleController.java:379"
+        }
+      }
+    },
+    "kdiary-save-report": {
+      "body.eventID": {
+        "none": {
+          "reason": "never read: KdiaryReportRO has no eventID field",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/KdiaryReportRO.java:5-7"
+        }
+      },
+      "body.taskReport": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_KDIARY_REPORT.task_report blob",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:431-436"
+        }
+      }
+    },
+    "kdiary-update-event": {
+      "body.description": {
+        "none": {
+          "reason": "never read: updateEvent only changes the repeat type of the stored event (description is ignored)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:230-242"
+        }
+      },
+      "body.eventID": {
+        "none": {
+          "reason": "only compared (owner check, findByEventID)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:227-230"
+        }
+      },
+      "body.priority": {
+        "none": {
+          "reason": "never read: updateEvent only changes the repeat type of the stored event (priority is ignored)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:230-242"
+        }
+      },
+      "body.remarksDescription": {
+        "none": {
+          "reason": "never read: updateEvent only changes the repeat type of the stored event (remarksDescription is ignored)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:230-242"
+        }
+      },
+      "body.scheduleEndDateAndTime": {
+        "none": {
+          "reason": "never read: updateEvent only changes the repeat type of the stored event (scheduleEndDateAndTime is ignored)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:230-242"
+        }
+      },
+      "body.scheduleStartDateAndTime": {
+        "none": {
+          "reason": "never read: updateEvent only changes the repeat type of the stored event (scheduleStartDateAndTime is ignored)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:230-242"
+        }
+      },
+      "body.title": {
+        "none": {
+          "reason": "never read: updateEvent only changes the repeat type of the stored event (title is ignored)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KdiaryScheduleServiceImpl.java:230-242"
+        }
+      }
+    },
+    "kdiary-update-remarks": {
+      "body.remarks": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KDIARY_SCHEDULE.remarks int",
+          "source": "src/main/java/com/webservice/kpost/repository/KdiaryScheduleRepository.java:27-29"
+        }
+      },
+      "body.remarksDescription": {
+        "none": {
+          "reason": "saved to TBL_KPOST_KDIARY_SCHEDULE.remarks_description mediumtext (16 MB): no practical width, and no length check on this route",
+          "source": "src/main/java/com/webservice/kpost/repository/KdiaryScheduleRepository.java:27-29"
+        }
+      }
+    },
+    "knews-admin-feed-disable": {
+      "path.feedId": {
+        "maxLength": {
+          "value": 64,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/util/knews/NewsQueryParser.java:29,50-51"
+        }
+      }
+    },
+    "knews-admin-feed-enable": {
+      "path.feedId": {
+        "maxLength": {
+          "value": 64,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/util/knews/NewsQueryParser.java:29,50-51"
+        }
+      }
+    },
+    "knews-feed-articles": {
+      "path.feedId": {
+        "maxLength": {
+          "value": 64,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/util/knews/NewsQueryParser.java:29,50-51"
         }
       }
     },
@@ -1083,7 +3565,30 @@
         }
       }
     },
+    "knews-publications": {
+      "body.languageId": {
+        "none": {
+          "reason": "only looked up (publications by language_id)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KnewsServiceImpl.java:52"
+        }
+      }
+    },
+    "knews-sub-categories": {
+      "body.categoryId": {
+        "none": {
+          "reason": "only looked up (sub-categories by category_id)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KnewsServiceImpl.java:46"
+        }
+      }
+    },
     "knews-update-settings": {
+      "body.archiveDays": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.archive_days int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KnewsServiceImpl.java:87-88,100"
+        }
+      },
       "body.category": {
         "maxLength": {
           "value": 100,
@@ -1105,6 +3610,13 @@
           "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:18"
         }
       },
+      "body.languageId": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.language_id int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KnewsServiceImpl.java:73-74,100"
+        }
+      },
       "body.newsSource": {
         "maxLength": {
           "value": 100,
@@ -1124,6 +3636,13 @@
           "value": 500,
           "from": "db-column TBL_KPOST_KN_SETTINGS.publications varchar(500)",
           "source": "src/main/java/com/webservice/kpost/entity/knews/KnewsSettings.java:36"
+        }
+      },
+      "body.retentionDays": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_KN_SETTINGS.retention_days int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/KnewsServiceImpl.java:85-86,100"
         }
       },
       "body.stateName": {
@@ -1155,6 +3674,38 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:139-143"
         }
+      },
+      "body.country": {
+        "none": {
+          "reason": "only matched with LIKE in the search query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:217-218"
+        }
+      },
+      "body.fullName": {
+        "none": {
+          "reason": "only matched with LIKE in the search query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:221-222"
+        }
+      },
+      "body.mobileNumber": {
+        "none": {
+          "reason": "only matched with LIKE in the search query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:225-226"
+        }
+      }
+    },
+    "profile-auto-search": {
+      "body.country": {
+        "none": {
+          "reason": "only compared in a WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:279-280"
+        }
+      },
+      "body.fullName": {
+        "none": {
+          "reason": "only matched with LIKE in the search query",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:272-276"
+        }
       }
     },
     "profile-change-or-forgot-access-code": {
@@ -1163,6 +3714,12 @@
           "value": 20,
           "from": "db-column TBL_KPOST_USER_MASTER.access_code varchar(20)",
           "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1011-1035"
+        }
+      },
+      "body.currentPassword": {
+        "none": {
+          "reason": "only compared to the stored password hash (PasswordHasher.matches)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:860"
         }
       }
     },
@@ -1173,6 +3730,26 @@
           "from": "db-column TBL_KPOST_USER_MASTER.password varchar(350)",
           "source": "src/main/java/com/webservice/kpost/entity/requestObject/UserRO.java:35"
         }
+      },
+      "body.oldPassword": {
+        "none": {
+          "reason": "only compared to the stored password hash (PasswordHasher.matches); no annotation on UserRO.oldPassword",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:340"
+        }
+      }
+    },
+    "profile-convert-base64": {
+      "body.base64String": {
+        "none": {
+          "reason": "decoded and uploaded to S3 (outside service); never saved in the DB",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/UserProfileServiceImpl.java:753-762"
+        }
+      },
+      "body.fileName": {
+        "none": {
+          "reason": "used as the S3 object key (outside service); never saved in the DB",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/UserProfileServiceImpl.java:761-764"
+        }
       }
     },
     "profile-deactivate-account": {
@@ -1181,6 +3758,398 @@
           "value": 150,
           "from": "db-column TBL_KPOST_DEACTIVATED_DETAILS.reason varchar(150)",
           "source": "src/main/java/com/webservice/kpost/entity/contacts/DeactivatedDetails.java:24"
+        }
+      }
+    },
+    "profile-delete-college": {
+      "body.collegeID": {
+        "none": {
+          "reason": "only compared to the ids in the stored JSON array",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:1134"
+        }
+      }
+    },
+    "profile-delete-experience": {
+      "body.experienceID": {
+        "none": {
+          "reason": "only compared to the ids in the stored JSON array",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:1257"
+        }
+      }
+    },
+    "profile-delete-other-activity": {
+      "body.activityID": {
+        "none": {
+          "reason": "only compared to the ids in the stored JSON array",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:1302"
+        }
+      }
+    },
+    "profile-delete-school": {
+      "body.schoolID": {
+        "none": {
+          "reason": "only compared to the ids in the stored JSON array",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:1175"
+        }
+      }
+    },
+    "profile-delete-university": {
+      "body.universityID": {
+        "none": {
+          "reason": "only compared to the ids in the stored JSON array",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:1215"
+        }
+      }
+    },
+    "profile-designation-or-profession": {
+      "body.requestType": {
+        "none": {
+          "reason": "compared to 'profession' / 'designation' (no length rule)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:555"
+        }
+      }
+    },
+    "profile-digital-card": {
+      "body.contactID": {
+        "none": {
+          "reason": "only looked up (findByKpostID / contact list query)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/UserProfileServiceImpl.java:313-315"
+        }
+      },
+      "body.userType": {
+        "none": {
+          "reason": "only compared to 'KnownContacts'",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/UserProfileServiceImpl.java:314"
+        }
+      }
+    },
+    "profile-download-cover": {
+      "path.kpostID": {
+        "none": {
+          "reason": "only used to build the S3 object key that is read",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/AWSs3ClientServiceImpl.java:851-855"
+        }
+      }
+    },
+    "profile-download-full-image": {
+      "path.kpostID": {
+        "none": {
+          "reason": "only used to build the S3 object key that is read",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1245-1253"
+        }
+      }
+    },
+    "profile-download-image": {
+      "path.kpostID": {
+        "none": {
+          "reason": "only used to build the S3 object key that is read",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1216-1224"
+        }
+      }
+    },
+    "profile-forgot-password-or-kpostid": {
+      "body.mobileNumber": {
+        "none": {
+          "reason": "controller not found: /v2/profile/forgotPasswordOrKpostID/",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:64"
+        }
+      },
+      "body.requestType": {
+        "none": {
+          "reason": "controller not found: /v2/profile/forgotPasswordOrKpostID/",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:64"
+        }
+      }
+    },
+    "profile-is-device-primary": {
+      "body.deviceIdentity_primary": {
+        "none": {
+          "reason": "never read: GET without a body; the device id comes from the token (request attribute)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1605"
+        }
+      }
+    },
+    "profile-kmail-password-patch-work": {
+      "body.kpostIDs[]": {
+        "none": {
+          "reason": "admin-only (two hard-coded kpostIDs; every QA account gets 403 before the list is read); saved into TBL_KMAIL_USER_MASTER in the KMail schema, whose width is not in the QA column list",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:2060-2065"
+        }
+      }
+    },
+    "profile-save-college": {
+      "body.collegeDetails[].about": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].attachmentPath[]": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].collegeID": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].collegeName": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].course": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].degree": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].field": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].logoPath": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].yearFrom": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      },
+      "body.collegeDetails[].yearTo": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.college_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:527-551"
+        }
+      }
+    },
+    "profile-save-experience": {
+      "body.experienceDetails[].achievements": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      },
+      "body.experienceDetails[].attachmentPath": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      },
+      "body.experienceDetails[].companyLocation": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      },
+      "body.experienceDetails[].companyName": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      },
+      "body.experienceDetails[].designation": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      },
+      "body.experienceDetails[].experienceID": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      },
+      "body.experienceDetails[].logoPath": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      },
+      "body.experienceDetails[].yearFrom": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      },
+      "body.experienceDetails[].yearTo": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.experience_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:727-749"
+        }
+      }
+    },
+    "profile-save-other-activity": {
+      "body.otherActivities[].achievements": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.other_activities longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:682-700"
+        }
+      },
+      "body.otherActivities[].activityID": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.other_activities longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:682-700"
+        }
+      },
+      "body.otherActivities[].attachmentPath[]": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.other_activities longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:682-700"
+        }
+      },
+      "body.otherActivities[].logoPath": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.other_activities longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:682-700"
+        }
+      },
+      "body.otherActivities[].title": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.other_activities longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:682-700"
+        }
+      }
+    },
+    "profile-save-school": {
+      "body.schoolDetails[].about": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      },
+      "body.schoolDetails[].attachmentPath[]": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      },
+      "body.schoolDetails[].course": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      },
+      "body.schoolDetails[].logoPath": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      },
+      "body.schoolDetails[].schoolID": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      },
+      "body.schoolDetails[].schoolName": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      },
+      "body.schoolDetails[].standard": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      },
+      "body.schoolDetails[].yearFrom": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      },
+      "body.schoolDetails[].yearTo": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.school_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:579-602"
+        }
+      }
+    },
+    "profile-save-university": {
+      "body.universityDetails[].about": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].attachmentPath[]": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].course": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].degree": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].field": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].logoPath": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].universityID": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].universityName": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].yearFrom": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      },
+      "body.universityDetails[].yearTo": {
+        "none": {
+          "reason": "serialised with the other entries into one JSON array saved in TBL_KPOST_USER_PROFILE.university_details longtext; no per-field width",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:629-652"
+        }
+      }
+    },
+    "profile-send-device-otp": {
+      "path.requestType": {
+        "none": {
+          "reason": "compared to 'primary' / 'secondary' (no length rule)",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1713"
         }
       }
     },
@@ -1202,7 +4171,30 @@
         }
       }
     },
+    "profile-share-user-details": {
+      "body.kpostID": {
+        "maxLength": {
+          "value": 50,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:1860-1861"
+        }
+      }
+    },
+    "profile-update-about": {
+      "body.aboutYourself": {
+        "none": {
+          "reason": "saved into TBL_KPOST_USER_PROFILE.about_yourself longtext (4 GB): no practical width, and no check in the controller",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:459-462"
+        }
+      }
+    },
     "profile-update-basic": {
+      "body.dateOfBirth": {
+        "none": {
+          "reason": "a date: parsed as LocalDate (yyyy-MM-dd) and saved into TBL_KPOST_USER_MASTER.date_of_birth date",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:980"
+        }
+      },
       "body.designation": {
         "maxLength": {
           "value": 350,
@@ -1215,6 +4207,12 @@
           "value": 6,
           "from": "db-column TBL_KPOST_USER_MASTER.gender varchar(6)",
           "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:884-889"
+        }
+      },
+      "body.knownLanguages[]": {
+        "none": {
+          "reason": "stored as JSON_ARRAY in TBL_KPOST_USER_PROFILE.known_languages (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:764,773"
         }
       },
       "body.otherEmail": {
@@ -1238,6 +4236,18 @@
           "value": 250,
           "from": "db-column TBL_KPOST_USER_PROFILE.present_address varchar(250)",
           "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:479-494"
+        }
+      },
+      "body.alternateMobileno": {
+        "minLength": {
+          "value": 7,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:127-129"
+        },
+        "maxLength": {
+          "value": 12,
+          "from": "service-check",
+          "source": "src/main/java/com/webservice/kpost/controller/UserProfileControllerV2.java:127-129"
         }
       },
       "body.areaName": {
@@ -1317,12 +4327,122 @@
         }
       }
     },
+    "profile-user-basic-by-kpostid": {
+      "body.countryID": {
+        "none": {
+          "reason": "only compared in a WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:1452-1453"
+        }
+      },
+      "body.mobileNumber": {
+        "none": {
+          "reason": "only compared in a WHERE (the UserRO @Size is not enforced: no @Valid on the parameter)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:1441-1442"
+        }
+      }
+    },
+    "profile-user-profile-by-kpostid": {
+      "body.kpostID": {
+        "none": {
+          "reason": "only compared in the user lookup WHERE",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:435"
+        }
+      }
+    },
+    "settings-change-theme": {
+      "body.colourPalette": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.theme (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:68,78-80"
+        }
+      },
+      "body.katchupChatStyle": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.theme (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:74,78-80"
+        }
+      },
+      "body.katchupChatTheme": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.theme (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:75,78-80"
+        }
+      },
+      "body.kpostLayoutTheme": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.theme (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:73,78-80"
+        }
+      },
+      "body.nightModeEnable": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.theme (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:69,78-80"
+        }
+      },
+      "body.scheduleTiming": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.theme (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:72,78-80"
+        }
+      },
+      "body.syncwithDeviceSetting": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.theme (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:71,78-80"
+        }
+      },
+      "body.useLocalSunset&Sunrise": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.theme (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:70,78-80"
+        }
+      }
+    },
+    "settings-font": {
+      "body.fontSize": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.font (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:34-37"
+        }
+      },
+      "body.fontStyle": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.font (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:35-37"
+        }
+      }
+    },
     "settings-kall-notification": {
       "body.(body)": {
         "minItems": {
           "value": 1,
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/GeneralSettingController.java:222-226"
+        }
+      },
+      "body.Do Not Disturb": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.kall_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:267-285"
+        }
+      },
+      "body.Message Preview": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.kall_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:267-285"
+        }
+      },
+      "body.Sound": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.kall_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:267-285"
+        }
+      },
+      "body.Vibrate": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.kall_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:267-285"
         }
       }
     },
@@ -1333,6 +4453,30 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/GeneralSettingController.java:128-132"
         }
+      },
+      "body.Do Not Disturb": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.katchup_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:135-153"
+        }
+      },
+      "body.Message Preview": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.katchup_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:135-153"
+        }
+      },
+      "body.Sound": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.katchup_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:135-153"
+        }
+      },
+      "body.Vibrate": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.katchup_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:135-153"
+        }
       }
     },
     "settings-kmail-notification": {
@@ -1342,9 +4486,144 @@
           "from": "service-check",
           "source": "src/main/java/com/webservice/kpost/controller/GeneralSettingController.java:175-179"
         }
+      },
+      "body.Do Not Disturb": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.kmail_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:201-219"
+        }
+      },
+      "body.Message Preview": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.kmail_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:201-219"
+        }
+      },
+      "body.Sound": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.kmail_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:201-219"
+        }
+      },
+      "body.Vibrate": {
+        "none": {
+          "reason": "stored inside the JSON document column TBL_KPOST_GENERAL_SETTINGS.kmail_notification (json; no per-field width)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/GeneralSettingServiceImpl.java:201-219"
+        }
       }
     },
     "signup-login-admin-registration": {
+      "body.address1": {
+        "maxLength": {
+          "value": 250,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.address1 varchar(250)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:2053"
+        }
+      },
+      "body.address2": {
+        "maxLength": {
+          "value": 250,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.address2 varchar(250)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:2054"
+        }
+      },
+      "body.areaName": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_USER_PROFILE.area_name varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1898"
+        }
+      },
+      "body.city": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_USER_PROFILE.city varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1895"
+        }
+      },
+      "body.companyName": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_USER_PROFILE.company_name varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1890"
+        }
+      },
+      "body.country": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_USER_PROFILE.country_name varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1896"
+        }
+      },
+      "body.countryCode": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_MASTER.country_code varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1882"
+        }
+      },
+      "body.countryID": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_USER_MASTER.country_id int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1881"
+        }
+      },
+      "body.dateOfBirth": {
+        "none": {
+          "reason": "date, parsed as an ISO date",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1766"
+        }
+      },
+      "body.designation": {
+        "maxLength": {
+          "value": 100,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.designation varchar(100)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:2048"
+        }
+      },
+      "body.entity": {
+        "maxLength": {
+          "value": 255,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.entity varchar(255)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:2047"
+        }
+      },
+      "body.firstName": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_USER_MASTER.first_name varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1869"
+        }
+      },
+      "body.gender": {
+        "maxLength": {
+          "value": 6,
+          "from": "db-column TBL_KPOST_USER_MASTER.gender varchar(6)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1871"
+        }
+      },
+      "body.kpostID": {
+        "maxLength": {
+          "value": 50,
+          "from": "db-column TBL_KPOST_USER_MASTER.kpost_id varchar(50)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1867"
+        }
+      },
+      "body.language": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_USER_PROFILE.preferred_language varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1892"
+        }
+      },
+      "body.lastName": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_USER_MASTER.last_name varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1870"
+        }
+      },
       "body.mobileNumber": {
         "minLength": {
           "value": 7,
@@ -1356,9 +4635,201 @@
           "from": "bean-validation",
           "source": "src/main/java/com/webservice/kpost/entity/requestObject/RegistrationRO.java:46"
         }
+      },
+      "body.otherEmail": {
+        "maxLength": {
+          "value": 200,
+          "from": "db-column TBL_KPOST_USER_PROFILE.other_email varchar(200)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1899"
+        }
+      },
+      "body.password": {
+        "minLength": {
+          "value": 8,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/RegistrationRO.java:81"
+        }
+      },
+      "body.pinCode": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_USER_PROFILE.pin_code int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1894"
+        }
+      },
+      "body.referenceName": {
+        "none": {
+          "reason": "never read on this path (createSignUpForAdmin / updateAdminDetails do not use it)",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/RegistrationRO.java:106"
+        }
+      },
+      "body.role": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_PROFILE.role varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1891"
+        }
+      },
+      "body.state": {
+        "maxLength": {
+          "value": 40,
+          "from": "db-column TBL_KPOST_USER_PROFILE.state varchar(40)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1897"
+        }
+      },
+      "body.uniqueName": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_ADMIN_REGISTRATION.unique_name varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:2058"
+        }
+      },
+      "body.userType": {
+        "maxLength": {
+          "value": 45,
+          "from": "db-column TBL_KPOST_USER_MASTER.user_type varchar(45)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:1883"
+        }
+      }
+    },
+    "signup-login-admin-user-login": {
+      "body.deviceIdentity_primary": {
+        "maxLength": {
+          "value": 150,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:34"
+        }
+      },
+      "body.deviceIdentity_secondary": {
+        "maxLength": {
+          "value": 150,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:38"
+        }
+      },
+      "body.deviceType": {
+        "maxLength": {
+          "value": 25,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.device_type varchar(25)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:383"
+        }
+      },
+      "body.kpostID": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_AUDIT_MASTER.kpost_id varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginForMediumAndLargeController.java:141"
+        }
+      },
+      "body.login_lattitude": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.login_latitude varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:388"
+        }
+      },
+      "body.login_longitude": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.login_longitude varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:389"
+        }
+      },
+      "body.loginRO.countryID": {
+        "none": {
+          "reason": "only used in the user lookup",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceV2Impl.java:92"
+        }
+      },
+      "body.loginRO.password": {
+        "none": {
+          "reason": "only matched against the stored hash",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceV2Impl.java:130"
+        }
+      },
+      "body.loginRO.userType": {
+        "none": {
+          "reason": "only used in the user lookup",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceV2Impl.java:93"
+        }
+      },
+      "body.logintime": {
+        "none": {
+          "reason": "date/time",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:387"
+        }
+      },
+      "body.oneSignal_Key": {
+        "maxLength": {
+          "value": 500,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:55"
+        }
+      },
+      "body.sessionID": {
+        "maxLength": {
+          "value": 150,
+          "from": "bean-validation",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:24"
+        }
+      }
+    },
+    "signup-login-fetch-personal-user-details": {
+      "body.countryID": {
+        "none": {
+          "reason": "only compared with the user's country",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:2399"
+        }
+      },
+      "body.kpostID": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_AUDIT_MASTER.kpost_id varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginControllerV2.java:436"
+        }
+      }
+    },
+    "signup-login-fetch-user-details": {
+      "body.countryID": {
+        "none": {
+          "reason": "only compared with the user's country",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:936"
+        }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "only looked up (by kpostID or mobile number)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:890"
+        }
+      }
+    },
+    "signup-login-generate-jwt": {
+      "body.refreshToken": {
+        "none": {
+          "reason": "only parsed as a JWT and its claims compared",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceV2Impl.java:290"
+        }
       }
     },
     "signup-login-kpost-id-exist": {
+      "body.firstName": {
+        "none": {
+          "reason": "only used to build KPost ID suggestions, each looked up",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:690"
+        }
+      },
+      "body.kpostID": {
+        "none": {
+          "reason": "only looked up (findById)",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:677"
+        }
+      },
+      "body.lastName": {
+        "none": {
+          "reason": "only used to build KPost ID suggestions, each looked up",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:690"
+        }
+      },
       "body.mobileNumber": {
         "minLength": {
           "value": 7,
@@ -1373,6 +4844,18 @@
       }
     },
     "signup-login-kpost-id-suggestions": {
+      "body.firstName": {
+        "none": {
+          "reason": "only used to build KPost ID suggestions, each looked up",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:690"
+        }
+      },
+      "body.lastName": {
+        "none": {
+          "reason": "only used to build KPost ID suggestions, each looked up",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:690"
+        }
+      },
       "body.mobileNumber": {
         "minLength": {
           "value": 7,
@@ -1386,12 +4869,33 @@
         }
       }
     },
+    "signup-login-login-history": {
+      "body.selectedDate": {
+        "none": {
+          "reason": "date string, only used in a LIKE filter",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:2348"
+        }
+      }
+    },
     "signup-login-set-access-code": {
       "body.accessCode": {
         "maxLength": {
           "value": 20,
           "from": "db-column TBL_KPOST_USER_MASTER.access_code varchar(20)",
           "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:842-877"
+        }
+      },
+      "body.currentPassword": {
+        "none": {
+          "reason": "only matched against the stored hash",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/UserProfileDaoImpl.java:860"
+        }
+      },
+      "body.kpostID": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_AUDIT_MASTER.kpost_id varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginControllerV2.java:335"
         }
       }
     },
@@ -1401,6 +4905,24 @@
           "value": 45,
           "from": "db-column TBL_KPOST_USER_MASTER.country_code varchar(45)",
           "source": "src/main/java/com/webservice/kpost/entity/singup/User.java:50"
+        }
+      },
+      "body.createdDate": {
+        "none": {
+          "reason": "ignored: replaced by the server time",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:285"
+        }
+      },
+      "body.dateOfBirth": {
+        "none": {
+          "reason": "date, parsed as an ISO date",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:245"
+        }
+      },
+      "body.email": {
+        "none": {
+          "reason": "replaced by the kpostID before the save; the sent value only looks up the mail OTP",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:277"
         }
       },
       "body.firstName": {
@@ -1446,6 +4968,13 @@
           "value": 12,
           "from": "bean-validation",
           "source": "src/main/java/com/webservice/kpost/entity/singup/User.java:56"
+        }
+      },
+      "body.module": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_USER_MASTER.module int",
+          "source": "src/main/java/com/webservice/kpost/serviceimpl/SignUpLoginServiceImpl.java:297"
         }
       },
       "body.password": {
@@ -1532,11 +5061,45 @@
           "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:25"
         }
       },
+      "body.kpostID": {
+        "maxLength": {
+          "value": 60,
+          "from": "db-column TBL_KPOST_AUDIT_MASTER.kpost_id varchar(60)",
+          "source": "src/main/java/com/webservice/kpost/controller/SignUpLoginControllerV2.java:111"
+        }
+      },
+      "body.login_lattitude": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.login_latitude varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:388"
+        }
+      },
+      "body.login_longitude": {
+        "maxLength": {
+          "value": 35,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.login_longitude varchar(35)",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:389"
+        }
+      },
+      "body.logintime": {
+        "none": {
+          "reason": "date/time",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:387"
+        }
+      },
+      "body.module": {
+        "maximum": {
+          "value": 2147483647,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.module int",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:392"
+        }
+      },
       "body.oneSignal_Key": {
         "maxLength": {
-          "value": 1000,
-          "from": "db-column TBL_KPOST_LOGIN_SESSION.onesignal_key varchar(1000)",
-          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:43"
+          "value": 500,
+          "from": "bean-validation @Size(max = 500) (userLogin takes @Valid LoginSession; the KPOSTLogin procedure parameter is VARCHAR(500), KP-BE656B)",
+          "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:55"
         }
       },
       "body.sessionID": {
@@ -1551,6 +5114,33 @@
           "value": 45,
           "from": "db-column TBL_KPOST_LOGIN_SESSION.socket_id varchar(45)",
           "source": "src/main/java/com/webservice/kpost/entity/singup/LoginSession.java:46"
+        }
+      },
+      "body.voip": {
+        "maxLength": {
+          "value": 65535,
+          "from": "db-column TBL_KPOST_LOGIN_SESSION.voip text",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoV2Impl.java:393"
+        }
+      }
+    },
+    "signup-login-user-logout": {
+      "body.deviceIdentity_Primary": {
+        "none": {
+          "reason": "never read as spelled: LogoutRO reads deviceIdentity_primary (case-sensitive), a KPOSTLogout match key",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/LogoutRO.java:14"
+        }
+      },
+      "body.deviceType": {
+        "none": {
+          "reason": "only passed to the KPOSTLogout stored procedure as the session match key; the Java code saves nothing",
+          "source": "src/main/java/com/webservice/kpost/daoimpl/SignUpLoginDaoImpl.java:241"
+        }
+      },
+      "body.logouttime": {
+        "none": {
+          "reason": "never read as spelled: LogoutRO reads logoutTime (case-sensitive); a time value in any case",
+          "source": "src/main/java/com/webservice/kpost/entity/requestObject/LogoutRO.java:16"
         }
       }
     }

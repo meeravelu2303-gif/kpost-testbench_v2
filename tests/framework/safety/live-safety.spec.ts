@@ -778,6 +778,49 @@ test.describe('live-application safety @framework', () => {
     expect(destructiveBlockReason(signupOtp, gateway), 'signup OTP still opens').toBeUndefined();
   });
 
+  test("the company admin's member writes that text the member run only as an opted-in call on the QA server (SMS mocked there)", () => {
+    // The product run's own flags, plus the flow's per-call shared-state opt-in.
+    const productRun = {
+      isProduction: true,
+      allowDestructive: true,
+      otpTestGateway: true,
+      testDbMode: true,
+      globalLifecycle: true,
+      allowGlobalLifecycle: true,
+      liveHostConfigured: false,
+    };
+    for (const label of ['POST /admin/addingUserByAdmin/', 'POST /admin/terminateUser/']) {
+      const write: GuardedEndpoint = { label, destructive: true, sideEffect: 'global' };
+      expect(
+        destructiveBlockReason(write, productRun),
+        `${label}: the QA server's opted-in flow call may run (owner: SMS is mocked there)`,
+      ).toBeUndefined();
+      expect(
+        destructiveBlockReason(write, { ...productRun, allowGlobalLifecycle: false }),
+        `${label}: never the engine, never without the flow's own opt-in`,
+      ).toMatch(/SMS kill-switch/);
+      expect(
+        destructiveBlockReason(write, { ...productRun, liveHostConfigured: true }),
+        `${label}: never when a live host is configured`,
+      ).toMatch(/SMS kill-switch/);
+      expect(
+        destructiveBlockReason(write, {
+          ...productRun,
+          allowGlobalLifecycle: false,
+          noSmsRecipient: true,
+        }),
+        `${label}: a mobile that cannot receive an SMS clears the SMS rule (the shared-state gate still applies)`,
+      ).not.toMatch(/SMS kill-switch/);
+    }
+    // Reallocate sends no SMS (no sendSMS on that path): it keeps the shared-state opt-in.
+    const reallocate: GuardedEndpoint = {
+      label: 'POST /admin/addingUserForReallocateByAdmin',
+      destructive: true,
+      sideEffect: 'global',
+    };
+    expect(destructiveBlockReason(reallocate, productRun)).toBeUndefined();
+  });
+
   test('the device and deactivation OTP senders stay blocked even on the OTP test gateway (they ignore the bypass)', () => {
     const gateway = {
       isProduction: true,

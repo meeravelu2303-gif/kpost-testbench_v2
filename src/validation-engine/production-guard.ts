@@ -146,6 +146,28 @@ export function destructiveBlockReason(
   ) {
     return `${endpoint.label}: texts the account's real phone even on the test gateway (the device and deactivation OTP senders ignore the OTP bypass) — BLOCKED; flows use common/sendOTP with the same OTP type instead`;
   }
+  /*
+   * The company admin's member writes text the member's mobile through the live SMS gateway on every
+   * host, whatever the OTP bypass: addingUserByAdmin sends the new KPost ID and a generated password
+   * (SignUpLoginServiceImpl.java:1318), terminateUser sends a leaving notice (SignUpLoginDaoImpl.java:679).
+   * Found 2026-11-05. The owner confirmed the same day that SMS is mocked on the QA test server ("The
+   * sms is already mocked only so we can create the users"), so a self-cleaning flow's opted-in call
+   * may run there (the shared-state gate below: GLOBAL_LIFECYCLE + TEST_DB_MODE, no live host). Anywhere
+   * else it stays blocked unless the flow vouches the mobile cannot receive an SMS (`noSmsRecipient`).
+   */
+  const onQaServerWithOptIn =
+    flags.isProduction &&
+    flags.globalLifecycle === true &&
+    flags.testDbMode === true &&
+    flags.allowGlobalLifecycle === true &&
+    !flags.liveHostConfigured;
+  if (
+    /addingUserByAdmin|terminateUser/i.test(endpoint.label) &&
+    !flags.noSmsRecipient &&
+    !onQaServerWithOptIn
+  ) {
+    return `${endpoint.label}: texts the member's mobile (account details or a leaving notice) — BLOCKED (SMS kill-switch); it runs only on the QA test server, where SMS is mocked, as a flow's opted-in call (or for a mobile that cannot receive an SMS)`;
+  }
   // After every real-SMS rule: the throwaway account's own calls may run whatever they need.
   if (throwawayAuthorized) return undefined;
   /*

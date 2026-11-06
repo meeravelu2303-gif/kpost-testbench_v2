@@ -11,11 +11,9 @@ import { expect, test } from '@fixtures';
  * (`getKallStatusUsingKallID`), never by the status code alone. Everything made is ended and cleared
  * in `finally`.
  *
- * Not covered here, by design not object-scoped (the body's `kallID` is a paging cursor and every row
- * is filtered by the caller's token): `kallDashboard` (KallControllerV3.java:745 sets receiver from the
- * token; KallDaoImplV3.java:534-544 `kallID < cursor AND (receiver = me OR sender = me)`) and
- * `kallInfo` (KallControllerV3.java:817; KallDaoImplV3.java:695-713 `kallID < cursor AND` the pair
- * (me, contactID) only).
+ * `kallDashboard` and `kallInfo` take the kallID as a paging cursor and are meant to filter every row
+ * by the caller's token (KallControllerV3.java:745, 817; KallDaoImplV3.java:534-544, 695-713); the
+ * last test proves that live: the outsider's history never lists the pair's call.
  */
 const P = AUTH_PROFILES.kpost.principals;
 const A = P.find((p) => p.key === 'personal'); // organiser
@@ -553,6 +551,106 @@ test.describe(
             !controlWorked,
             `owner control: B's identical join did not take effect (HTTP ${own.status}), so the outsider's refusals prove nothing`,
           );
+      } finally {
+        await cleanUp(endpoints, made);
+      }
+    });
+
+    test("an outsider's call history never lists another pair's call (kallDashboard, kallInfo) @api @kpost-api @security", async ({
+      endpoints,
+    }) => {
+      // Both take a kallID paging cursor (rows below it) and are meant to be filtered by the caller's
+      // token (KallDaoImplV3.java:534-544, 695-713). Proven here: the outsider pages from just above
+      // A's call, and names B and A as the contact, and must never see the call.
+      const subject = `QA xuser history ${stamp}`;
+      const made: number[] = [];
+      try {
+        const kallID = await schedule(endpoints, 'history', subject, [B!]);
+        test.skip(!kallID, 'the call could not be scheduled right now, so nothing to probe');
+        made.push(kallID!);
+        const cursor = kallID! + 1;
+        const history = (
+          id: 'kall-dashboard' | 'kall-info',
+          who: Principal,
+          body: Json,
+          label: string,
+        ) =>
+          endpoints.sendTo(
+            id,
+            { body },
+            {
+              label: `kall-xuser:history:${label}`,
+              auth: { principal: who },
+              allowLiveRead: true,
+              ownedIdentifiers: [kallID!],
+            },
+          );
+
+        // Owner controls: the organiser's own dashboard and its history with B both list the call.
+        const ownDashboard = await history(
+          'kall-dashboard',
+          A!,
+          { kallID: cursor },
+          'owner-dashboard',
+        );
+        const ownInfo = await history(
+          'kall-info',
+          A!,
+          { contactID: B!.username, kallID: cursor },
+          'owner-info',
+        );
+        const dashboardControl =
+          ownDashboard.status < 300 && discloses(ownDashboard.bodyText, kallID!, subject);
+        const infoControl = ownInfo.status < 300 && discloses(ownInfo.bodyText, kallID!, subject);
+        test.skip(
+          !dashboardControl && !infoControl,
+          `owner control: neither kallDashboard (HTTP ${ownDashboard.status}) nor kallInfo (HTTP ${ownInfo.status}) lists A's own scheduled call ${kallID}, so the outsider's empty answer proves nothing`,
+        );
+
+        const probes: Array<[string, 'kall-dashboard' | 'kall-info', Json, boolean]> = [
+          [
+            'dashboard from the same cursor',
+            'kall-dashboard',
+            { kallID: cursor },
+            dashboardControl,
+          ],
+          [
+            'info naming the participant',
+            'kall-info',
+            { contactID: B!.username, kallID: cursor },
+            infoControl,
+          ],
+          [
+            'info naming the organiser',
+            'kall-info',
+            { contactID: A!.username, kallID: cursor },
+            infoControl,
+          ],
+        ];
+        for (const [variant, id, body, controlled] of probes) {
+          if (!controlled) {
+            test.info().annotations.push({
+              type: 'not-judged',
+              description: `${id} (${variant}): the owner's own call did not list the call`,
+            });
+            continue;
+          }
+          const attack = await history(id, C!, body, `outsider:${variant.replace(/\W+/g, '-')}`);
+          const leaked = attack.status < 300 && discloses(attack.bodyText, kallID!, subject);
+          if (leaked)
+            endpoints.recordBusinessRuleViolation({
+              endpointId: id,
+              ruleId: `IDOR-${id}-foreign-call-in-history`,
+              rule: "A user's call history lists only calls they organised or were invited to.",
+              expected: `no row for call ${kallID} in ${C!.username}'s answer`,
+              actual: `HTTP ${attack.status} (${variant}): ${C!.username}'s ${id} listed call ${kallID} (${A!.username} → ${B!.username})`,
+              request: { body },
+              correlationId: attack.correlationId,
+            });
+          expect
+            .soft(leaked, `an outsider's ${id} must not list call ${kallID} (${variant})`)
+            .toBe(false);
+        }
       } finally {
         await cleanUp(endpoints, made);
       }

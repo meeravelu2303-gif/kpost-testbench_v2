@@ -2,9 +2,11 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { KALL_STATUS } from '@api/contract/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { checkOnRealRecord, realRecordIds } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 import { initiateShape } from '@api/definitions/kpost/kall/direct.api';
 import { scheduleShape } from '@api/definitions/kpost/kall/schedule.api';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * Kall feature flow: place, schedule, join, reschedule and end real calls, each test self-cleaning.
@@ -63,7 +65,8 @@ test.describe(
     test(
       'direct call: place → read status (both ways) → transition → end → clear (FR-C05/C08) @api @kall',
       { tag: '@sanity', annotation: [{ type: 'requirement-partial', description: 'FR-KL-005' }] },
-      async ({ endpoints }) => {
+      async ({ endpoints, validationEngine, databases }) => {
+        const db = databases.for('kpost-api');
         try {
           const placed = await endpoints.sendTo(
             'kall-initiate',
@@ -116,6 +119,33 @@ test.describe(
             expect
               .soft(both.status, 'updateSenderAndReceiverKallStatus is accepted')
               .toBeLessThan(300);
+            if (both.status < 300)
+              // KallServiceImplV3.java:366-368 → KallDaoImplV3.java:420 sets sender_kall_status 2 on the sender's call.
+              await expectStored(
+                db,
+                'kall-update-sender-receiver-status',
+                {
+                  table: 'TBL_KPOST_KOOL_KALL_MASTER',
+                  where: { kall_id: kallID, sender: A.username },
+                  columns: { sender_kall_status: KALL_STATUS.cancelled },
+                  rule: "updateSenderAndReceiverKallStatus stores the cancelled status on the sender's call",
+                },
+                endpoints,
+              );
+
+            // The kallID-keyed calls through the full engine on this real call (the sweep's kallID
+            // names no call, so its probes answer 404 before any limit; found live 2026-11-05).
+            // After the flow's own status steps, before the call is ended and cleared.
+            for (const [id, body] of realRecordIds([
+              ['kall-get-status', { sender: A.username, receiver: B.username, kallID }],
+              ['kall-get-status-by-id', { kpostID: A.username, kallID }],
+              ['kall-update-status', { id: kallID, kallStatus: KALL_STATUS.cancelled, kallID }],
+              [
+                'kall-update-sender-receiver-status',
+                { sender: A.username, kallStatus: KALL_STATUS.cancelled, kallID },
+              ],
+            ]))
+              await checkOnRealRecord(validationEngine, id, { body: { ...body } }, [kallID]);
 
             const ended = await endpoints.sendTo(
               'kall-end-individual',
@@ -130,6 +160,19 @@ test.describe(
               { label: 'feature:kall:clear-by-ids', auth: { principal: A }, allowLiveWrite: true },
             );
             expect.soft(cleared.status, 'clearKallBykallIds is accepted').toBeLessThan(300);
+            if (cleared.status < 300)
+              // KallDaoImplV3.java:328-333 sets delete_by_sender on the caller's own call.
+              await expectStored(
+                db,
+                'kall-clear-by-ids',
+                {
+                  table: 'TBL_KPOST_KOOL_KALL_MASTER',
+                  where: { kall_id: kallID, sender: A.username },
+                  columns: { delete_by_sender: true },
+                  rule: "clearKallBykallIds flags the caller's call deleted (delete_by_sender)",
+                },
+                endpoints,
+              );
           }
         } finally {
           await clearHistory(endpoints, [A, B]);
@@ -179,6 +222,19 @@ test.describe(
               },
             );
             expect.soft(modified.status, 'modifyKallMembers is accepted').toBeLessThan(300);
+            if (modified.status < 300)
+              // KallDaoImplV3.java:248-252, 277 adds a participant row for each added user, status 6 (Scheduled).
+              await expectStored(
+                database,
+                'kall-modify-members',
+                {
+                  table: 'TBL_KPOST_KOOL_KALL_DETAILS',
+                  where: { kall_id: kallID, receiver: C.username },
+                  columns: { receiver_kall_status: 6, delete_status: false },
+                  rule: 'modifyKallMembers stores a Scheduled participant row for each added member',
+                },
+                endpoints,
+              );
 
             // FR-C04: the invitee joins. `id` is the participant row (TBL_KPOST_KOOL_KALL_DETAILS.id),
             // not the kallID; sending the kallID returns a misleading 500, so it is read from the DB.
@@ -210,9 +266,13 @@ test.describe(
 
             // BR-C01: reschedule creates a NEW call (new kallID, status 6) and moves the ORIGINAL row to
             // 7 (ReScheduled). The transition is checked on the original row, not the response's row.
+            const rescheduleBody = scheduleShape({
+              kallID,
+              kallDetails: [{ receiver: B.username }],
+            });
             const rescheduled = await endpoints.sendTo(
               'kall-reschedule',
-              { body: scheduleShape({ kallID, kallDetails: [{ receiver: B.username }] }) },
+              { body: rescheduleBody },
               { label: 'feature:kall:reschedule', auth: { principal: A }, allowLiveWrite: true },
             );
             expect.soft(rescheduled.status, 'reScheduleKall is accepted').toBeLessThan(300);
@@ -239,6 +299,38 @@ test.describe(
             expect
               .soft(newRow?.senderKallStatus, 'the new call starts fresh as Scheduled (6)')
               .toBe(6);
+
+            if (rescheduled.status < 300) {
+              // KallDaoImplV3.java:457 / :463 move the original call and its participants to 7 (ReScheduled).
+              await expectStored(
+                database,
+                'kall-reschedule',
+                {
+                  table: 'TBL_KPOST_KOOL_KALL_DETAILS',
+                  where: { kall_id: kallID, receiver: B.username },
+                  columns: { receiver_kall_status: 7 },
+                  rule: "reScheduleKall moves the original call's participants to ReScheduled (7)",
+                },
+                endpoints,
+              );
+              // KallServiceImplV3.java:477-484 saves the new call: the caller, the subject sent, Scheduled (6).
+              if (typeof rescheduledId === 'number' && rescheduledId !== kallID)
+                await expectStored(
+                  database,
+                  'kall-reschedule',
+                  {
+                    table: 'TBL_KPOST_KOOL_KALL_MASTER',
+                    where: { kall_id: rescheduledId },
+                    columns: {
+                      sender: A.username,
+                      subject: rescheduleBody.subject,
+                      sender_kall_status: 6,
+                    },
+                    rule: 'reScheduleKall stores a new Scheduled call with the subject it was sent, for the caller',
+                  },
+                  endpoints,
+                );
+            }
 
             if (database.enabled && rescheduledId !== undefined) {
               const originalRow = await database.findOne<{ sender_kall_status: number }>({
@@ -278,11 +370,17 @@ test.describe(
       },
     );
 
-    test('a repeating scheduled call is created (FR-C02) @api @kall', async ({ endpoints }) => {
+    test('a repeating scheduled call is created (FR-C02) @api @kall', async ({
+      endpoints,
+      databases,
+    }) => {
       // A 4xx is not auto-filed by the write-flow pipeline (5xx only), so a rejected repeat interval
       // is recorded explicitly as a business-rule violation.
+      const db = databases.for('kpost-api');
       try {
         const repeatBody = scheduleShape({
+          // A unique title, so the stored series row is found by (sender, subject).
+          subject: `QA Bench repeat call ${Date.now()} — safe to ignore`,
           repeatType: 1,
           repeatedDate: JSON.stringify({ start_date: '2026-09-14', end_date: '2026-09-20' }),
           kallDetails: [{ receiver: B.username }],
@@ -303,6 +401,24 @@ test.describe(
           });
         }
         expect.soft(repeat.status, 'scheduledRepeatKall is accepted').toBeLessThan(300);
+        if (repeat.status < 300)
+          // KallServiceImplV3.java:639-684 saves the series master: the caller, the subject and repeat type sent,
+          // sender status 12 (schedule repeat), no parent.
+          await expectStored(
+            db,
+            'kall-scheduled-repeat',
+            {
+              table: 'TBL_KPOST_KOOL_KALL_MASTER',
+              where: {
+                sender: A.username,
+                subject: String(repeatBody.subject),
+                parent_kall_id: null,
+              },
+              columns: { repeat_type: 1, sender_kall_status: 12 },
+              rule: 'scheduledRepeatKall stores the series call with the repeat type and subject it was sent',
+            },
+            endpoints,
+          );
       } finally {
         await clearHistory(endpoints, [A, B]);
       }

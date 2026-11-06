@@ -6,6 +6,7 @@ import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
+import { atOrAfter, expectStored } from '../../../support/db-stored';
 
 /**
  * Contacts feature flow: add, block, unblock and delete our own second account, leaving the address
@@ -18,7 +19,7 @@ const contactId = testData.victimKpostId;
 async function write(
   endpoints: EndpointExecutor,
   id: string,
-  bodyObj: Record<string, unknown>,
+  bodyObj: unknown,
   label: string,
 ): Promise<number> {
   const ex = await endpoints.sendTo(
@@ -126,7 +127,9 @@ test.describe(
 
     test('block → verify → unblock (single and bulk), restoring the state @api @contacts', async ({
       endpoints,
+      databases,
     }) => {
+      const db = databases.for('kpost-api');
       const wasBlocked = (await contactRow(endpoints))?.isBlocked === true;
       try {
         const blocked = await write(
@@ -144,6 +147,19 @@ test.describe(
           'block-multiple',
         );
         expect.soft(bulk, 'bulk block is accepted').toBeLessThan(300);
+        // ContactsDirectoryDaoImpl.java:585 sets is_blocked on the caller's row for each contactID.
+        if (bulk < 300)
+          await expectStored(
+            db,
+            'contacts-block-multiple',
+            {
+              table: 'TBL_KPOST_USER_CONTACTS',
+              where: { kpost_id: A.username, contact_id: contactId },
+              columns: { is_blocked: true },
+              rule: "blockOrUnBlockMultipleContact sets is_blocked on the caller's row for each contact it names",
+            },
+            endpoints,
+          );
       } finally {
         // Restore: unblock both ways, unless the contact was blocked before the test.
         if (!wasBlocked) {
@@ -165,18 +181,37 @@ test.describe(
 
     test('add-multiple, import-phone and update-invite, all on our own data @api @contacts', async ({
       endpoints,
+      databases,
     }) => {
+      const db = databases.for('kpost-api');
       // Only our own account and number; the address book is put back as it was afterwards.
       const original = await contactRow(endpoints);
       try {
         if (original) await write(endpoints, 'contacts-delete', { contactID: contactId }, 'setup');
+        const startedAt = Date.now();
+        // A JSON array, as the controller binds it (ContactsDirectoryControllerV2.addMultipleContact
+        // takes List<Contacts>); a single object is refused as a malformed body.
         const multi = await write(
           endpoints,
           'contacts-add-multiple',
-          { contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' },
+          [{ contactID: contactId, firstName: 'Qa', lastName: 'Tester', userType: 'PERSONAL' }],
           'add-multiple',
         );
         expect.soft(multi, 'addMultipleContact returns a status').toBeLessThan(600);
+        // ContactsDirectoryDaoImpl.java:146 revives a deleted row, :191 saves a new one: either way the
+        // row is live (delete_status false) and created_date is now.
+        if (multi < 300)
+          await expectStored(
+            db,
+            'contacts-add-multiple',
+            {
+              table: 'TBL_KPOST_USER_CONTACTS',
+              where: { kpost_id: A.username, contact_id: contactId },
+              columns: { delete_status: false, created_date: atOrAfter(startedAt) },
+              rule: "addMultipleContact puts each named contact in the caller's address book as a live row",
+            },
+            endpoints,
+          );
 
         const imported = await write(
           endpoints,

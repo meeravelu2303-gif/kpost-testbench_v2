@@ -6,6 +6,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { isSqlClient } from '@database/database-client';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { checkOnRealRecord } from '@engine/real-record';
 import { FILES, uniqueName } from '@fixtures/files';
 import { expect, test } from '@fixtures';
 import { deleteUploaded, uploadFile, type Uploaded } from '../../../support/attachments';
@@ -310,6 +311,7 @@ test.describe(
 
     test("an outsider cannot read a shared message's recipient lists (getSharedMessageInfo) @api @kpost-api @security", async ({
       endpoints,
+      validationEngine,
     }) => {
       // A copies message (type 14, as the client builds it): B is the TO recipient, R a revealed copy.
       let msgIDs: number[] = [];
@@ -360,6 +362,13 @@ test.describe(
         const own = await info(A!, 'xuser-shared-info:owner-control');
         expect(own.status, 'control: the sender reads their own share info').toBe(200);
         expect(names(own).length, 'control: it lists the recipients').toBeGreaterThan(0);
+        // The full engine on this genuinely shared message (the sweep has none to send).
+        await checkOnRealRecord(
+          validationEngine,
+          'katchup-shared-message-info',
+          { body: { sharedMessageId } },
+          [sharedMessageId!],
+        );
 
         const attack = await info(C!, 'xuser-shared-info:outsider');
         retryOrSkip(attack.status === 0, 'getSharedMessageInfo did not answer (timeout)');
@@ -389,6 +398,7 @@ test.describe(
     test("an outsider cannot read a shared card's details by msgID (getSharedMessageDetails) @api @kpost-api @security", async ({
       endpoints,
       databases,
+      validationEngine,
     }) => {
       // A shares a contact card with B, shaped as DigitalCard.js sends it (messageType 22).
       const marker = `QA xuser card ${Date.now()}`;
@@ -432,6 +442,13 @@ test.describe(
         const own = await details(B!, 'xuser-shared-details:recipient-control');
         expect(own.status, 'control: the recipient reads the shared card').toBe(200);
         expect(own.bodyText, 'control: with the card that was shared').toContain(marker);
+        // The full engine on this genuinely shared card, as its sender (the sweep has none to send).
+        await checkOnRealRecord(
+          validationEngine,
+          'katchup-shared-message-details',
+          { pathParams: { msgID: msgID! } },
+          [msgID!],
+        );
 
         const attack = await details(C!, 'xuser-shared-details:outsider');
         retryOrSkip(attack.status === 0, 'getSharedMessageDetails did not answer (timeout)');

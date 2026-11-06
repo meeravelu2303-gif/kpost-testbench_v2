@@ -4,6 +4,7 @@ import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { JPEG_1X1 } from '@api/definitions/kpost/profile/image.api';
 import { expect, test } from '@fixtures';
+import { expectStored, filled } from '../../../support/db-stored';
 
 /**
  * Profile write lifecycle: read, update, read back, restore, so nothing is left altered.
@@ -11,6 +12,48 @@ import { expect, test } from '@fixtures';
  */
 
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
+
+/** The caller's own TBL_KPOST_USER_PROFILE / TBL_KPOST_USER_MASTER row (kpost_id is the key). */
+const ownRow = (): { kpost_id: string } => ({ kpost_id: A.username });
+
+/** The entries of a JSON-array column (a longtext string, a BLOB, or a parsed JSON value). */
+function jsonEntries(value: unknown): Array<Record<string, unknown>> {
+  let parsed: unknown = value;
+  try {
+    if (Buffer.isBuffer(value)) parsed = JSON.parse(value.toString('utf8'));
+    else if (typeof value === 'string') parsed = value.trim() ? JSON.parse(value) : [];
+  } catch {
+    return [];
+  }
+  return Array.isArray(parsed)
+    ? parsed.filter((e): e is Record<string, unknown> => !!e && typeof e === 'object')
+    : [];
+}
+
+/** The JSON-array column holds an entry carrying every field of `fields` as sent. */
+const hasEntry =
+  (fields: Record<string, unknown>) =>
+  (value: unknown): boolean =>
+    jsonEntries(value).some((entry) =>
+      Object.entries(fields).every(([key, want]) => String(entry[key]) === String(want)),
+    );
+
+/** The JSON-array column no longer holds the entry whose `idField` is `id`. */
+const noEntry =
+  (idField: string, id: string) =>
+  (value: unknown): boolean =>
+    !jsonEntries(value).some((entry) => entry[idField] === id);
+
+/** A MySQL `date` (mysql2: a local-midnight Date) is the calendar day `ymd`. */
+const sameDay =
+  (ymd: string) =>
+  (value: unknown): boolean => {
+    if (value instanceof Date) {
+      const pad = (n: number) => String(n).padStart(2, '0');
+      return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}` === ymd;
+    }
+    return typeof value === 'string' && value.startsWith(ymd);
+  };
 
 /**
  * The caller's editable profile fields (`data.userProfile`). Uses `profile-get-user-profile`, not
@@ -88,7 +131,8 @@ test.describe(
       'update designation is saved and reads back, then is restored @api @profile',
       // A person's profession is their Profile designation (Personal signup has no profession field).
       { annotation: [{ type: 'requirement', description: 'FR-SL-031' }] },
-      async ({ endpoints }) => {
+      async ({ endpoints, databases }) => {
+        const db = databases.for('kpost-api');
         const before = (await fetchProfile(endpoints)).designation;
         const marker = `QA Designation ${Date.now() % 100000}`;
 
@@ -99,6 +143,18 @@ test.describe(
           'designation',
         );
         expect(status, 'update designation accepted').toBeLessThan(300);
+        // UserProfileDaoImpl.java:885 sets designation on the caller's profile row.
+        await expectStored(
+          db,
+          'profile-update-designation',
+          {
+            table: 'TBL_KPOST_USER_PROFILE',
+            where: ownRow(),
+            columns: { designation: marker },
+            rule: "updateDesignation stores the designation sent on the caller's profile",
+          },
+          endpoints,
+        );
 
         // Best-effort read-back (see the about test for why).
         const after = (await fetchProfile(endpoints)).designation;
@@ -115,9 +171,56 @@ test.describe(
       },
     );
 
+    test('set profile privacy (private in search) is stored, then restored @api @profile', async ({
+      endpoints,
+      databases,
+    }) => {
+      const db = databases.for('kpost-api');
+      // The value to put back: the stored one, else 0 (public, the QA accounts' setting).
+      const row = db.enabled
+        ? await db.findOne<Record<string, unknown>>({
+            table: 'TBL_KPOST_USER_PROFILE',
+            where: ownRow(),
+          })
+        : undefined;
+      const original = Number(row?.privacy_status ?? 0) || 0;
+      const target = original === 1 ? 0 : 1;
+      try {
+        const status = await write(
+          endpoints,
+          'profile-set-profile-privacy',
+          { privacyStatus: target },
+          'set-privacy',
+        );
+        expect.soft(status, 'setProfilePrivacy accepted').toBeLessThan(300);
+        // UserProfileDaoImpl.java:411 sets privacy_status on the caller's profile row.
+        if (status < 300)
+          await expectStored(
+            db,
+            'profile-set-profile-privacy',
+            {
+              table: 'TBL_KPOST_USER_PROFILE',
+              where: ownRow(),
+              columns: { privacy_status: target },
+              rule: "setProfilePrivacy stores the privacyStatus sent on the caller's profile",
+            },
+            endpoints,
+          );
+      } finally {
+        await write(
+          endpoints,
+          'profile-set-profile-privacy',
+          { privacyStatus: original },
+          'set-privacy-restore',
+        ).catch(() => undefined);
+      }
+    });
+
     test('basic, contact and privacy updates are accepted and actually persist @api @profile', async ({
       endpoints,
+      databases,
     }) => {
+      const db = databases.for('kpost-api');
       // No read endpoint returns gender/dateOfBirth, so knownLanguages marks the basic update.
       const before = await fetchProfile(endpoints);
       // A city may hold only letters, spaces, '.', '-' or "'", so the run's timestamp is spelled in letters.
@@ -136,6 +239,45 @@ test.describe(
         'basic',
       );
       expect.soft(basic, 'update basic accepted').toBeLessThan(300);
+      if (basic < 300) {
+        // UserProfileDaoImpl.java:764 sets known_languages, designation and other_email on the profile row.
+        await expectStored(
+          db,
+          'profile-update-basic',
+          {
+            table: 'TBL_KPOST_USER_PROFILE',
+            where: ownRow(),
+            columns: {
+              known_languages: (v: unknown) => {
+                let list: unknown[] = [];
+                try {
+                  const parsed: unknown = typeof v === 'string' ? JSON.parse(v) : v;
+                  if (Array.isArray(parsed)) list = parsed;
+                } catch {
+                  return false;
+                }
+                return ['English', 'Tamil'].every((l) => list.includes(l));
+              },
+              designation: 'QA Bench',
+              other_email: testData.kpostId,
+            },
+            rule: "updateBasicInformation stores the languages, designation and other e-mail sent on the caller's profile",
+          },
+          endpoints,
+        );
+        // UserProfileDaoImpl.java:763 sets gender and date_of_birth on the caller's user row.
+        await expectStored(
+          db,
+          'profile-update-basic',
+          {
+            table: 'TBL_KPOST_USER_MASTER',
+            where: ownRow(),
+            columns: { gender: 'Female', date_of_birth: sameDay('1995-01-01') },
+            rule: "updateBasicInformation stores the gender and date of birth sent on the caller's user row",
+          },
+          endpoints,
+        );
+      }
 
       const contact = await write(
         endpoints,
@@ -150,6 +292,26 @@ test.describe(
         'contact',
       );
       expect.soft(contact, 'update contact accepted').toBeLessThan(300);
+      // UserProfileDaoImpl.java:487 sets country, pin code, city, area and the address (a JSON array
+      // holding addressLine1) on the caller's profile row.
+      if (contact < 300)
+        await expectStored(
+          db,
+          'profile-update-contact',
+          {
+            table: 'TBL_KPOST_USER_PROFILE',
+            where: ownRow(),
+            columns: {
+              country_name: 'INDIA',
+              pin_code: testData.pinCode,
+              city: marker,
+              area_name: 'QA',
+              present_address: hasEntry({ addressLine1: marker }),
+            },
+            rule: "updateContactInformation stores the country, pin code, city, area and address sent on the caller's profile",
+          },
+          endpoints,
+        );
 
       const privacyValue = JSON.stringify({ about: 'false', experience: 'false', marker });
       const privacy = await write(
@@ -211,7 +373,9 @@ test.describe(
 
     test('an education record can be saved and then deleted @api @profile', async ({
       endpoints,
+      databases,
     }) => {
+      const db = databases.for('kpost-api');
       // A unique marker per run tells this record from leftovers. `collegeDetails` is a JSON
       // string; `collegeDetailsAsJson` is the parsed array, so read that one.
       const marker = `QA Bench College ${Date.now()}`;
@@ -226,6 +390,19 @@ test.describe(
         'save-college',
       );
       expect.soft(saved, 'save college accepted').toBeLessThan(300);
+      // UserProfileDaoImpl.java:550 merges the entry (collegeName, degree, …) into college_details.
+      if (saved < 300)
+        await expectStored(
+          db,
+          'profile-save-college',
+          {
+            table: 'TBL_KPOST_USER_PROFILE',
+            where: ownRow(),
+            columns: { college_details: hasEntry({ collegeName: marker, degree: 'QA' }) },
+            rule: "saveOrUpdateCollegeDetails adds the college sent to the caller's college_details",
+          },
+          endpoints,
+        );
 
       // Read it back to find its id, then delete it (cleanup).
       const profile = await fetchProfile(endpoints);
@@ -244,12 +421,27 @@ test.describe(
           'delete-college',
         );
         expect.soft(deleted, 'delete college accepted').toBeLessThan(300);
+        // UserProfileDaoImpl.java:1146 writes college_details back without the entry deleted.
+        if (deleted < 300)
+          await expectStored(
+            db,
+            'profile-delete-college',
+            {
+              table: 'TBL_KPOST_USER_PROFILE',
+              where: ownRow(),
+              columns: { college_details: noEntry('collegeID', collegeID) },
+              rule: "deleteCollegeDetail removes that college from the caller's college_details",
+            },
+            endpoints,
+          );
       }
     });
 
     test('school/university records can each be saved and then deleted @api @profile', async ({
       endpoints,
+      databases,
     }) => {
+      const db = databases.for('kpost-api');
       // Same save → read back → delete as the college test, for school and university.
       const marker = Date.now();
       const records: Array<{
@@ -262,6 +454,9 @@ test.describe(
         idField: string;
         deleteId?: string;
         deleteLabel?: string;
+        /** The stored row after the save, then after the delete (each names its endpoint literally). */
+        checkSaved: () => Promise<void>;
+        checkDeleted: (id: string) => Promise<void>;
       }> = [
         {
           saveId: 'profile-save-school',
@@ -278,6 +473,37 @@ test.describe(
           idField: 'schoolID',
           deleteId: 'profile-delete-school',
           deleteLabel: 'delete-school',
+          // UserProfileDaoImpl.java:601 merges the entry (schoolName, standard, …) into school_details.
+          checkSaved: () =>
+            expectStored(
+              db,
+              'profile-save-school',
+              {
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: ownRow(),
+                columns: {
+                  school_details: hasEntry({
+                    schoolName: `QA Bench School ${marker}`,
+                    standard: '10',
+                  }),
+                },
+                rule: "saveOrUpdateSchoolDetails adds the school sent to the caller's school_details",
+              },
+              endpoints,
+            ),
+          // UserProfileDaoImpl.java:1186 writes school_details back without the entry deleted.
+          checkDeleted: (id) =>
+            expectStored(
+              db,
+              'profile-delete-school',
+              {
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: ownRow(),
+                columns: { school_details: noEntry('schoolID', id) },
+                rule: "deleteSchoolDetail removes that school from the caller's school_details",
+              },
+              endpoints,
+            ),
         },
         {
           saveId: 'profile-save-university',
@@ -297,12 +523,44 @@ test.describe(
           idField: 'universityID',
           deleteId: 'profile-delete-university',
           deleteLabel: 'delete-university',
+          // UserProfileDaoImpl.java:651 merges the entry (universityName, degree, …) into university_details.
+          checkSaved: () =>
+            expectStored(
+              db,
+              'profile-save-university',
+              {
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: ownRow(),
+                columns: {
+                  university_details: hasEntry({
+                    universityName: `QA Bench University ${marker}`,
+                    degree: 'Masters',
+                  }),
+                },
+                rule: "saveOrUpdateUniversityDetails adds the university sent to the caller's university_details",
+              },
+              endpoints,
+            ),
+          // UserProfileDaoImpl.java:1226 writes university_details back without the entry deleted.
+          checkDeleted: (id) =>
+            expectStored(
+              db,
+              'profile-delete-university',
+              {
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: ownRow(),
+                columns: { university_details: noEntry('universityID', id) },
+                rule: "deleteUniversityDetail removes that university from the caller's university_details",
+              },
+              endpoints,
+            ),
         },
       ];
 
       for (const rec of records) {
         const saved = await write(endpoints, rec.saveId, rec.saveBody, rec.saveLabel);
         expect.soft(saved, `${rec.saveLabel} accepted`).toBeLessThan(300);
+        if (saved < 300) await rec.checkSaved();
 
         const profile = await fetchProfile(endpoints);
         let list: Array<Record<string, unknown>> = [];
@@ -325,13 +583,16 @@ test.describe(
             rec.deleteLabel,
           );
           expect.soft(deleted, `${rec.deleteLabel} accepted`).toBeLessThan(300);
+          if (deleted < 300) await rec.checkDeleted(recordId);
         }
       }
     });
 
     test('experience and other-activity records can each be saved and then deleted @api @profile', async ({
       endpoints,
+      databases,
     }) => {
+      const db = databases.for('kpost-api');
       // Experience needs a real company name (QA_COMPANY_NAME): the QA-identifier guard checks it.
       test.skip(
         !process.env.QA_COMPANY_NAME,
@@ -349,6 +610,9 @@ test.describe(
         idField: string;
         deleteId: string;
         deleteLabel: string;
+        /** The stored row after the save, then after the delete (each names its endpoint literally). */
+        checkSaved: () => Promise<void>;
+        checkDeleted: (id: string) => Promise<void>;
       }> = [
         {
           saveId: 'profile-save-experience',
@@ -369,6 +633,37 @@ test.describe(
           idField: 'experienceID',
           deleteId: 'profile-delete-experience',
           deleteLabel: 'delete-experience',
+          // UserProfileDaoImpl.java:748 merges the entry (companyName, designation, …) into experience_details.
+          checkSaved: () =>
+            expectStored(
+              db,
+              'profile-save-experience',
+              {
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: ownRow(),
+                columns: {
+                  experience_details: hasEntry({
+                    companyName: testData.companyName,
+                    designation: `QA Bench ${marker}`,
+                  }),
+                },
+                rule: "saveOrUpdateExperienceDetails adds the experience sent to the caller's experience_details",
+              },
+              endpoints,
+            ),
+          // UserProfileDaoImpl.java:1268 writes experience_details back without the entry deleted.
+          checkDeleted: (id) =>
+            expectStored(
+              db,
+              'profile-delete-experience',
+              {
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: ownRow(),
+                columns: { experience_details: noEntry('experienceID', id) },
+                rule: "deleteExperienceDetail removes that experience from the caller's experience_details",
+              },
+              endpoints,
+            ),
         },
         {
           saveId: 'profile-save-other-activity',
@@ -384,12 +679,44 @@ test.describe(
           idField: 'activityID',
           deleteId: 'profile-delete-other-activity',
           deleteLabel: 'delete-other-activity',
+          // UserProfileDaoImpl.java:699 merges the entry (title, achievements, …) into other_activities.
+          checkSaved: () =>
+            expectStored(
+              db,
+              'profile-save-other-activity',
+              {
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: ownRow(),
+                columns: {
+                  other_activities: hasEntry({
+                    title: `QA Bench ${marker}`,
+                    achievements: 'QA bench activity',
+                  }),
+                },
+                rule: "saveOrUpdateOtherActivity adds the activity sent to the caller's other_activities",
+              },
+              endpoints,
+            ),
+          // UserProfileDaoImpl.java:1313 writes other_activities back without the entry deleted.
+          checkDeleted: (id) =>
+            expectStored(
+              db,
+              'profile-delete-other-activity',
+              {
+                table: 'TBL_KPOST_USER_PROFILE',
+                where: ownRow(),
+                columns: { other_activities: noEntry('activityID', id) },
+                rule: "deleteOtherActivity removes that activity from the caller's other_activities",
+              },
+              endpoints,
+            ),
         },
       ];
 
       for (const rec of records) {
         const saved = await write(endpoints, rec.saveId, rec.saveBody, rec.saveLabel);
         expect.soft(saved, `${rec.saveLabel} accepted`).toBeLessThan(300);
+        if (saved < 300) await rec.checkSaved();
 
         const profile = await fetchProfile(endpoints);
         let list: Array<Record<string, unknown>> = [];
@@ -412,6 +739,7 @@ test.describe(
             rec.deleteLabel,
           );
           expect.soft(deleted, `${rec.deleteLabel} accepted`).toBeLessThan(300);
+          if (deleted < 300) await rec.checkDeleted(recordId);
         }
       }
     });
@@ -432,7 +760,9 @@ test.describe(
 
     test('every image write (upload / cover / signature / attachments) then remove, on our own profile @api @profile', async ({
       endpoints,
+      databases,
     }) => {
+      const db = databases.for('kpost-api');
       // Known defect #559: profile-update-signature returns 500 (tracked, not re-filed here).
       // `sendTo(id, {})` sends `{}` literally (no default request()), so the JPEG body is built here.
       const raw = async (id: string, label: string): Promise<number> => {
@@ -465,6 +795,24 @@ test.describe(
         },
       );
       expect.soft(jpegUploadEx.status, 'updateProfileImage accepts a JPEG').toBeLessThan(300);
+      // UserProfileDaoImpl.java:829 stores the S3 key AWSs3ClientServiceImpl.java:647 built for the
+      // caller (<kpostID with @→_>/profile/<the part before the first '.', @→_>.jpg) in profile_image.
+      const imageKey = `${A.username.replaceAll('@', '_')}/profile/${(A.username.split('.')[0] ?? '').replaceAll('@', '_')}.jpg`;
+      if (jpegUploadEx.status < 300)
+        await expectStored(
+          db,
+          'profile-update-image',
+          {
+            table: 'TBL_KPOST_USER_PROFILE',
+            where: ownRow(),
+            columns: {
+              profile_image: (v: unknown) =>
+                filled(v) && String(v).toLowerCase() === imageKey.toLowerCase(),
+            },
+            rule: "updateProfileImage stores the uploaded picture's path on the caller's profile",
+          },
+          endpoints,
+        );
 
       // The picture just uploaded, read back through every route that serves it. Each answer is also
       // checked against the route's file contract (the bytes agree with the Content-Type).

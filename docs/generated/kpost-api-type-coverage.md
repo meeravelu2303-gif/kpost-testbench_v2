@@ -8,42 +8,61 @@ the QA server; whether each check passes is the run report.
 | --- | --- | ---: | ---: | ---: | ---: | ---: |
 | contract | a documented response schema (workbook, or backend source confirmed live) is checked | 252 | 246 | 6 | 18 | **97.6%** |
 | positive | the normal request is sent on the QA server (by the engine or by a hand-written flow) | 258 | 258 | 0 | 12 | **100%** |
-| negative | an endpoint that takes input gets bad input sent to it | 201 | 175 | 26 | 29 | **87.1%** |
-| boundary | every text/number input has its limit (from the code or the DB column) probed | 205 | 19 | 186 | 5 | **9.3%** |
-| authentication | a login-protected endpoint is sent no, forged, expired and malformed tokens | 204 | 184 | 20 | 20 | **90.2%** |
-| authorization | an endpoint that names a record (an id) is tried by a stranger, with the owner's call as control | 125 | 75 | 50 | 0 | **60%** |
-| security | injection, XSS, headers and data-exposure probes run on it | 246 | 224 | 22 | 24 | **91.1%** |
-| performance | its response time and size are measured on the QA server | 246 | 224 | 22 | 24 | **91.1%** |
-| data-integrity | a write is checked in the database (a DB validation, or a DB-asserted spec) | 157 | 22 | 135 | 0 | **14%** |
-| business-rules | a write has its product rule checked by the end result (a rule spec or a lifecycle) | 157 | 129 | 28 | 0 | **82.2%** |
+| negative | an endpoint that takes input gets bad input sent to it | 197 | 196 | 1 | 33 | **99.5%** |
+| boundary | every text/number input has its limit (from the code or the DB column) probed | 72 | 69 | 3 | 24 | **95.8%** |
+| authentication | a login-protected endpoint is sent no, forged, expired and malformed tokens | 186 | 185 | 1 | 38 | **99.5%** |
+| authorization | an endpoint that names a record (an id) is tried by a stranger, with the owner's call as control | 102 | 102 | 0 | 3 | **100%** |
+| security | injection, XSS, headers and data-exposure probes run on it | 224 | 222 | 2 | 46 | **99.1%** |
+| performance | its response time and size are measured on the QA server | 224 | 222 | 2 | 46 | **99.1%** |
+| data-integrity | a write is checked in the database (a DB validation, or a DB-asserted spec) | 103 | 100 | 3 | 19 | **97.1%** |
+| business-rules | a write has its product rule checked by the end result (a rule spec or a lifecycle) | 112 | 112 | 0 | 11 | **100%** |
 
 "Walled by rule": endpoints the owner rules forbid on a shared QA server, or that no QA account can
 ever make succeed (unreachable by design), so they are not counted as gaps. The SMS senders and
 session enders are refused by the production guard (`tests/framework/safety/walled-endpoints.spec.ts`);
 the others are listed with why.
 
+- `admin-adding-user-by-admin` — walled by owner rule (a real SMS/e-mail, or ends the running session)
+- `admin-adding-user-for-reallocate` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `admin-bank-and-company-details` — every limited input is one the QA guard protects (path.companyID)
+- `admin-create-remove-backup-admin` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `admin-hold-or-release` — a shared-state write, which the engine never sends (CLAUDE.md §3)
 - `admin-reset-password` — walled by owner rule (a real SMS/e-mail, or ends the running session)
+- `admin-terminate-user` — walled by owner rule (a real SMS/e-mail, or ends the running session)
+- `admin-update-bank-account` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `admin-update-company-details` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `admin-update-role` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `admin-user-management-details` — every limited input is one the QA guard protects (path.companyID)
 - `common-company-details` — every input is a mobile number, e-mail or company name the QA guard protects
 - `common-company-details-by-admin` — every input is a mobile number, e-mail or company name the QA guard protects
 - `common-company-name-exist` — every input is a mobile number, e-mail or company name the QA guard protects
+- `common-download-company-logo` — every limited input is one the QA guard protects (path.companyID)
 - `common-forgot-password-otp` — walled by owner rule (a real SMS/e-mail, or ends the running session)
+- `common-forgot-password-update` — a shared-state write, which the engine never sends (CLAUDE.md §3)
 - `common-is-company-name-exist` — every input is a mobile number, e-mail or company name the QA guard protects
-- `common-send-otp-to-mail` — every input is a mobile number, e-mail or company name the QA guard protects
+- `common-mobile-no-exist-in-company` — every limited input is one the QA guard protects (body.mobileNumber)
+- `common-remove-company-logo` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `common-send-otp-to-mail` — every limited input is one the QA guard protects (body.otherEmail)
+- `common-update-company-logo` — a shared-state write, which the engine never sends (CLAUDE.md §3)
 - `common-update-flutter-app-version` — sets the app-update prompt of every Flutter client
 - `common-user-details-by-mobile` — every input is a mobile number, e-mail or company name the QA guard protects
-- `contacts-update-invite` — every input is a mobile number, e-mail or company name the QA guard protects
+- `common-validate-otp` — every limited input is one the QA guard protects (body.mobileNumber)
 - `kall-firebase-notification-test` — walled by owner rule (a real SMS/e-mail, or ends the running session)
 - `kall-legacy-cancel-schedule` — unreachable by design: acts on the old TBL_KPOST_KALL_TRACKERS, which no current route writes ("Kall not found" for the owner too)
 - `kall-legacy-remove-member` — unreachable by design: acts on the old TBL_KPOST_KALL_SCHEDULE_DETAILS, which no current route writes
 - `kall-legacy-set-status` — unreachable by design: acts on the old TBL_KPOST_KALL_TRACKERS, which no current route writes ("Kall not found" for the owner too)
+- `katchup-change-caption` — a shared-state write, which the engine never sends (CLAUDE.md §3)
 - `katchup-forward-backtrack` — unreachable by design: only the system sender id may call it (KatchupControllerV2 forwardMessageBacktrackByMsgID)
 - `katchup-patch-work-for-group` — a one-off data migration only two developer ids may run
+- `katchup-upload-multipart-files` — a shared-state write, which the engine never sends (CLAUDE.md §3)
 - `katchup-voice-translate` — walled by owner rule (a real SMS/e-mail, or ends the running session)
 - `kbooking-block-ticket` — holds a real seat at the booking partner
 - `kbooking-update-city-list` — refreshes the RedBus city list of every user
 - `knews-admin-feed-disable` — changes the news feed of every user
 - `knews-admin-feed-enable` — changes the news feed of every user
 - `knews-admin-feed-sync` — changes the news feed of every user
+- `profile-change-or-forgot-access-code` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `profile-change-password` — a shared-state write, which the engine never sends (CLAUDE.md §3)
 - `profile-deactivate-account` — walled by owner rule (a real SMS/e-mail, or ends the running session)
 - `profile-forgot-password-or-kpostid` — walled by owner rule (a real SMS/e-mail, or ends the running session)
 - `profile-kmail-password-patch-work` — resets KMail passwords; only two developer ids may run it
@@ -54,7 +73,14 @@ the others are listed with why.
 - `profile-set-device-secondary` — walled by owner rule (a real SMS/e-mail, or ends the running session)
 - `profile-update-device-primary` — walled by owner rule (a real SMS/e-mail, or ends the running session)
 - `profile-update-device-secondary` — walled by owner rule (a real SMS/e-mail, or ends the running session)
+- `signup-login-admin-registration` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `signup-login-admin-user-login` — its negative probes would send many wrong passwords for the shared business admins (rule 7: one per account per run)
 - `signup-login-business-adding-user-public` — overwrites any existing account (no login, no company check)
+- `signup-login-kpost-id-exist` — every limited input is one the QA guard protects (body.mobileNumber)
+- `signup-login-kpost-id-suggestions` — every limited input is one the QA guard protects (body.mobileNumber)
+- `signup-login-logout-all-devices` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `signup-login-set-access-code` — a shared-state write, which the engine never sends (CLAUDE.md §3)
+- `signup-login-signup` — a shared-state write, which the engine never sends (CLAUDE.md §3)
 
 ## contract — 97.6% (246/252)
 
@@ -75,553 +101,261 @@ the normal request is sent on the QA server (by the engine or by a hand-written 
 
 No gap.
 
-## negative — 87.1% (175/201)
+## negative — 99.5% (196/197)
 
 an endpoint that takes input gets bad input sent to it.
 
-**not cleared to run on the QA server (no productionSafe)** (19)
+**not cleared to run on the QA server (no productionSafe)** (1)
 
-- `common-update-company-logo`
-- `common-download-company-logo`
-- `common-remove-company-logo`
-- `admin-adding-user-by-admin`
-- `admin-terminate-user`
-- `admin-hold-or-release`
-- `admin-create-remove-backup-admin`
-- `admin-update-company-details`
-- `admin-update-bank-account`
-- `admin-update-role`
-- `signup-login-admin-user-login`
-- `signup-login-generate-jwt`
-- `signup-login-set-access-code`
-- `katchup-reference-messages-details`
-- `katchup-change-caption`
-- `kdiary-get-event-date`
-- `profile-change-or-forgot-access-code`
-- `profile-change-password`
 - `knews-feed-articles`
 
-**no request schema to mutate** (7)
-
-- `admin-adding-user-for-reallocate`
-- `katchup-upload-multipart-files`
-- `profile-update-image`
-- `profile-upload-cover`
-- `profile-upload-attachments`
-- `profile-upload-image-s3`
-- `profile-update-signature`
-
-## boundary — 9.3% (19/205)
+## boundary — 95.8% (69/72)
 
 every text/number input has its limit (from the code or the DB column) probed.
 
-**no limit for some fields** (184)
+**Not counted: every input has a cited "no limit"** (114; only compared, a flag, or never read — reasons in `src/api/contract/source/kpost-api.limits.json`)
 
-- `common-send-otp` — no limit for body.countryID, body.mobileNumber, body.requestType
-- `common-validate-otp` — no limit for body.otp, body.countryID, body.mobileNumber, body.sendDate
-- `common-validate-mail-otp` — no limit for body.email, body.sendDate, body.otp
-- `common-forgot-password-otp` — no limit for body.kpostID, body.requestType
-- `common-forgot-password-update` — no limit for body.kpostID
-- `common-pincode` — no limit for body.postalCode
-- `common-postal-pincode` — no limit for body.postalCode
-- `common-languages` — no limit for body.countryID
-- `common-designation` — no limit for body.designation
-- `common-country` — no limit for body.countryID
-- `common-mobile-no-exist-in-company` — no limit for body.companyID
-- `common-user-details-by-mobile` — no limit for body.mobileNumber
-- `common-kpost-id-using-module` — no limit for body.module[]
-- `common-unique-name-exist` — no limit for body.companyName, body.uniqueName, body.domain
-- `common-domain` — no limit for body.countryID, body.userType
-- `common-generate-domain-and-unique-name` — no limit for body.kpostID, body.companyName
-- `common-is-company-name-exist` — no limit for body.companyName
-- `common-company-details` — no limit for body.mobileNumber
-- `common-download-profile-image` — no limit for path.kpostID
-- `common-company-details-by-admin` — no limit for body.mobileNumber
-- `common-company-details-by-mobile-and-product` — no limit for body.mobileNumber, body.productId
-- `common-company-name-exist` — no limit for path.companyName
-- `common-update-company-logo` — no limit for body.companyID
-- `common-remove-company-logo` — no limit for body.companyID
-- `common-update-flutter-app-version` — no limit for body.currentVersion
-- `common-send-message` — no limit for body.receiver, body.messageType, body.subject, body.actualMessage, body.messageTime, body.serverTime +7
-- `admin-kpostid-designation-suggestion` — no limit for body.companyName, body.designation, body.companyID
-- `admin-display-name-suggestion` — no limit for body.companyName, body.designation
-- `admin-adding-user-by-admin` — no limit for body.companyID, body.requestType
-- `admin-terminate-user` — no limit for body.kpostID, body.companyID
-- `admin-reset-password` — no limit for body.kpostID, body.companyID, body.mobileNumber, body.countryID, body.userType
-- `admin-hold-or-release` — no limit for body.kpostID, body.companyID
-- `admin-create-remove-backup-admin` — no limit for body.kpostID, body.companyID
-- `admin-update-bank-account` — no limit for body.accountNumber, body.accountHolderName, body.ifscCode, body.bankName, body.branch
-- `admin-update-role` — no limit for body.kpostID
-- `signup-login-fetch-personal-user-details` — no limit for body.kpostID, body.countryID
-- `signup-login-fetch-user-details` — no limit for body.kpostID, body.countryID
-- `signup-login-user-login` — no limit for body.login_lattitude, body.login_longitude, body.voip, body.module, body.kpostID, body.logintime
-- `signup-login-admin-user-login` — no limit for body.loginRO.countryID, body.loginRO.password, body.loginRO.userType, body.kpostID, body.sessionID, body.deviceType +6
-- `signup-login-generate-jwt` — no limit for body.refreshToken
-- `signup-login-login-history` — no limit for body.selectedDate
-- `signup-login-user-logout` — no limit for body.deviceType, body.deviceIdentity_Primary, body.logouttime
-- `signup-login-set-access-code` — no limit for body.kpostID, body.currentPassword
-- `signup-login-signup` — no limit for body.createdDate, body.dateOfBirth, body.module, body.email
-- `signup-login-admin-registration` — no limit for body.kpostID, body.companyName, body.entity, body.uniqueName, body.firstName, body.lastName +18
-- `signup-login-kpost-id-exist` — no limit for body.kpostID, body.firstName, body.lastName
-- `signup-login-kpost-id-suggestions` — no limit for body.firstName, body.lastName
-- `katchup-messages-subject` — no limit for path.id
-- `katchup-conversation` — no limit for body.receiver
-- `katchup-message-count` — no limit for body.receiver, body.groupFlag
-- `katchup-search-message` — no limit for body.searchMessage
-- `katchup-search-subject` — no limit for body.selectedContact, body.searchMessage
-- `katchup-filter-message` — no limit for body.selectedContact, body.messageBy
-- `katchup-reference-details` — no limit for body.referenceMessageIDList[], body.sourceMsgID
-- `katchup-messages-by-reference` — no limit for body.referenceMessageList, body.messageType
-- `katchup-global-search` — no limit for body.keyWord
-- `katchup-send-message` — no limit for body.messageType, body.subject, body.actualMessage, body.messageTime, body.serverTime, body.status +4
-- `katchup-send-multipart` — no limit for body.receiver, body.messageType, body.subject, body.actualMessage, body.messageTime, body.serverTime +5
-- `katchup-send-bulk` — no limit for body.receiverList[], body.messageType, body.subject, body.attachmentCaption, body.actualMessage, body.messageTime +5
-- `katchup-send-bulk-multipart` — no limit for body.receiverList[], body.messageType, body.subject, body.attachmentCaption, body.actualMessage, body.messageTime +4
-- `katchup-send-forward-selected-attachment` — no limit for body.receiver, body.sender, body.messageType, body.subject, body.actualMessage, body.attachmentCaption +7
-- `katchup-recall-message` — no limit for body.msgID, body.status
-- `katchup-legacy-recall-message` — no limit for body.msgID, body.sender
-- `katchup-save-messages` — no limit for body.groupKpostID, body.msgIDs[], body.groupFlag
-- `katchup-report-abuse` — no limit for body.reportID[]
-- `katchup-forward-message-new` — no limit for body.receiver, body.messageType, body.subject, body.actualMessage, body.attachmentCaption, body.status +5
-- `katchup-forward-message` — no limit for body.receiver, body.messageType, body.subject, body.actualMessage, body.attachmentCaption, body.status +5
-- `katchup-forward-multiple` — no limit for body.forwardReceiverList[], body.forwardMessageIDList[], body.attachmentCaption, body.uuid[], body.messageType, body.sessionID +1
-- `katchup-voice-translate` — no limit for body.uuid
-- `katchup-old-download` — no limit for path.uuid
-- `katchup-download` — no limit for path.uuid
-- `katchup-download-attachment` — no limit for path.uuid
-- `katchup-download-from-s3` — no limit for path.uuid
-- `katchup-download-thumbnail` — no limit for path.uuid
-- `katchup-media-streaming` — no limit for path.uuid
-- `katchup-generate-thumbnail` — no limit for body.uuid[]
-- `group-create` — no limit for body.groupKpostName
-- `group-add-user` — no limit for body.groupID, body.groupKpostID, body.memberDetails[].kpostID, body.memberDetails[].memberDesignation, body.memberDetails[].remarks, body.memberDetails[].createdBy
-- `group-remove-member` — no limit for body.memberKpostIdList[], body.groupKpostID
-- `group-remove-member-v1-legacy` — no limit for body.groupKpostID
-- `group-leave` — no limit for body.id, body.groupID, body.groupKpostID
-- `group-admin-access` — no limit for body.kpostIDs[], body.ids[], body.groupID
-- `group-edit-name` — no limit for body.groupKpostID, body.groupKpostName
-- `group-delete` — no limit for body.groupID
-- `group-update-image` — no limit for body.groupKpostID
-- `group-remove-image` — no limit for body.groupKpostID
-- `group-download-image` — no limit for path.groupKpostID, path.kpostID
-- `group-download-full-image` — no limit for path.groupKpostID, path.kpostID
-- `group-details-by-id` — no limit for path.groupKpostID
-- `kall-dashboard` — no limit for body.kallID
-- `kall-info` — no limit for body.contactID
-- `kall-contact-info` — no limit for body.contactID
-- `kall-fetch-scheduled-repeat` — no limit for body.scheduledStartTime
-- `kall-get-status` — no limit for body.sender, body.receiver
-- `kall-get-status-by-id` — no limit for body.kpostID
-- `kall-initiate` — no limit for body.kallMode, body.kallType, body.kallStatus, body.kallStartTime
-- `kall-update-status` — no limit for body.id, body.kallStatus, body.kallID
-- `kall-update-sender-receiver-status` — no limit for body.sender, body.kallStatus, body.kallID
-- `kall-end-individual` — no limit for body.kallID
-- `kall-clear-by-ids` — no limit for body.kallIds[]
-- `kall-scheduled` — no limit for body.kallMode, body.subject, body.scheduledStartTime, body.scheduledEndTime, body.repeatType, body.repeatedDate
-- `kall-reschedule` — no limit for body.kallMode, body.subject, body.scheduledStartTime, body.scheduledEndTime, body.meetingLink, body.repeatType +2
-- `kall-join-schedule` — no limit for body.id, body.kallID
-- `kall-end-kool` — no limit for body.id
-- `kall-scheduled-repeat` — no limit for body.kallMode, body.subject, body.scheduledStartTime, body.scheduledEndTime, body.meetingLink, body.repeatType +1
-- `kall-modify-members` — no limit for body.removingUserIds[]
-- `kall-legacy-set-status` — no limit for body.kallID, body.kallStatus, body.kallEndTime
-- `kall-legacy-cancel-schedule` — no limit for body.kallID, body.kallStatus, body.kallEndTime
-- `contacts-global-search` — no limit for body.search, body.languageList[], body.userTypeList[], body.countryList[]
-- `contacts-search-details` — no limit for body.requestType, body.country, body.provienceName, body.state, body.city
-- `contacts-add` — no limit for body.firstName, body.lastName
-- `contacts-add-multiple` — no limit for body.contactID, body.firstName, body.lastName, body.userType
-- `contacts-add-reference` — no limit for body.contactID
-- `contacts-delete` — no limit for body.contactID
-- `contacts-block` — no limit for body.contactID
-- `contacts-block-multiple` — no limit for body.contactIDs[]
-- `contacts-import-phone` — no limit for body.deviceID, body.mobileNumber, body.countryCode, body.phoneContacts[].mobileNumber, body.phoneContacts[].countryCode, body.phoneContacts[].name
-- `contacts-update-invite` — no limit for body.mobileNumber
-- `settings-font` — no limit for body.fontSize, body.fontStyle
-- `settings-change-theme` — no limit for body.colourPalette, body.nightModeEnable, body.useLocalSunset&Sunrise, body.syncwithDeviceSetting, body.scheduleTiming, body.kpostLayoutTheme +2
-- `settings-katchup-notification` — no limit for body.Message Preview, body.Sound, body.Vibrate, body.Do Not Disturb
-- `settings-kmail-notification` — no limit for body.Message Preview, body.Sound, body.Vibrate, body.Do Not Disturb
-- `settings-kall-notification` — no limit for body.Message Preview, body.Sound, body.Vibrate, body.Do Not Disturb
-- `kdiary-create-event` — no limit for body.title, body.description, body.priority, body.scheduleStartDateAndTime, body.scheduleEndDateAndTime, body.remarksDescription
-- `kdiary-create-schedule` — no limit for body.title, body.description, body.priority, body.scheduleStartDateAndTime, body.scheduleEndDateAndTime, body.remarksDescription
-- `kdiary-update-event` — no limit for body.title, body.description, body.priority, body.scheduleStartDateAndTime, body.scheduleEndDateAndTime, body.remarksDescription +1
-- `kdiary-edit-schedule-event` — no limit for body.title, body.description, body.priority, body.scheduleStartDateAndTime, body.scheduleEndDateAndTime, body.remarksDescription +1
-- `kdiary-delete-event` — no limit for body.eventID
-- `kdiary-add-participants` — no limit for body.eventID
-- `kdiary-update-remarks` — no limit for body.remarks, body.remarksDescription
-- `kdiary-save-report` — no limit for body.eventID, body.taskReport
-- `kdiary-edit-report` — no limit for body.id, body.taskReport
-- `kdiary-delete-report` — no limit for body.id
-- `aws-katchup-presigned` — no limit for body.extension
-- `aws-check-attachment` — no limit for body.attachmentsUuid[]
-- `aws-delete-attachment` — no limit for path.uuid
-- `aws-check-attachment-get` — no limit for path.uuid
-- `profile-designation-or-profession` — no limit for body.requestType
-- `profile-user-profile-by-kpostid` — no limit for body.kpostID
-- `profile-user-basic-by-kpostid` — no limit for body.mobileNumber, body.countryID
-- `profile-digital-card` — no limit for body.contactID, body.userType
-- `profile-auto-search` — no limit for body.fullName, body.country
-- `profile-advanced-search` — no limit for body.fullName, body.mobileNumber, body.country
-- `profile-is-device-primary` — no limit for body.deviceIdentity_primary
-- `profile-download-image` — no limit for path.kpostID
-- `profile-download-full-image` — no limit for path.kpostID
-- `profile-download-cover` — no limit for path.kpostID
-- `profile-kmail-password-patch-work` — no limit for body.kpostIDs[]
-- `profile-change-or-forgot-access-code` — no limit for body.currentPassword
-- `profile-update-about` — no limit for body.aboutYourself
-- `profile-update-basic` — no limit for body.knownLanguages[], body.dateOfBirth
-- `profile-update-contact` — no limit for body.alternateMobileno
-- `profile-share-user-details` — no limit for body.kpostID
-- `profile-save-college` — no limit for body.collegeDetails[].collegeID, body.collegeDetails[].collegeName, body.collegeDetails[].degree, body.collegeDetails[].course, body.collegeDetails[].field, body.collegeDetails[].yearFrom +4
-- `profile-save-school` — no limit for body.schoolDetails[].schoolID, body.schoolDetails[].schoolName, body.schoolDetails[].standard, body.schoolDetails[].course, body.schoolDetails[].yearFrom, body.schoolDetails[].yearTo +3
-- `profile-save-university` — no limit for body.universityDetails[].universityID, body.universityDetails[].universityName, body.universityDetails[].degree, body.universityDetails[].course, body.universityDetails[].field, body.universityDetails[].yearFrom +4
-- `profile-save-other-activity` — no limit for body.otherActivities[].activityID, body.otherActivities[].title, body.otherActivities[].achievements, body.otherActivities[].logoPath, body.otherActivities[].attachmentPath[]
-- `profile-save-experience` — no limit for body.experienceDetails[].experienceID, body.experienceDetails[].companyName, body.experienceDetails[].designation, body.experienceDetails[].companyLocation, body.experienceDetails[].achievements, body.experienceDetails[].yearFrom +3
-- `profile-delete-college` — no limit for body.collegeID
-- `profile-delete-school` — no limit for body.schoolID
-- `profile-delete-university` — no limit for body.universityID
-- `profile-delete-experience` — no limit for body.experienceID
-- `profile-delete-other-activity` — no limit for body.activityID
-- `profile-convert-base64` — no limit for body.base64String, body.fileName
-- `profile-send-device-otp` — no limit for path.requestType
-- `profile-change-password` — no limit for body.oldPassword
-- `profile-forgot-password-or-kpostid` — no limit for body.mobileNumber, body.requestType
-- `dashboard-kall-history` — no limit for body.serverTime
-- `dashboard-home-msgs` — no limit for body.serverTime, body.lastMsgID
-- `dashboard-katchup-msg` — no limit for body.serverTime
-- `dashboard-home-new-msgs` — no limit for body.firstMsgID, body.serverTime
-- `kbooking-city-suggestion` — no limit for path.query
-- `kbooking-destinations` — no limit for body.sourceCityID
-- `kbooking-available-trips` — no limit for body.travelDate
-- `kbooking-trip-details` — no limit for body.tripID
-- `kbooking-boarding-point` — no limit for body.boardingID, body.tripID
-- `kbooking-trip-details-v2` — no limit for body.inventoryId
-- `kbooking-block-ticket` — no limit for body.availableTripId, body.boardingPointId, body.destination, body.inventoryItems[].fare, body.inventoryItems[].passenger.address, body.inventoryItems[].passenger.age +11
-- `knews-sub-categories` — no limit for body.categoryId
-- `knews-publications` — no limit for body.languageId
-- `knews-update-settings` — no limit for body.languageId, body.retentionDays, body.archiveDays
-- `knews-feed-articles` — no limit for path.feedId
-- `knews-admin-feed-enable` — no limit for path.feedId
-- `knews-admin-feed-disable` — no limit for path.feedId
-
-**not cleared to run on the QA server (no productionSafe)** (2)
-
-- `common-download-company-logo`
-- `admin-update-company-details`
-
-## authentication — 90.2% (184/204)
-
-a login-protected endpoint is sent no, forged, expired and malformed tokens.
-
-**not cleared to run on the QA server (no productionSafe)** (20)
-
-- `common-update-company-logo`
-- `common-download-company-logo`
-- `common-remove-company-logo`
-- `admin-adding-user-by-admin`
-- `admin-terminate-user`
-- `admin-hold-or-release`
 - `admin-create-remove-backup-admin`
-- `admin-update-company-details`
-- `admin-update-bank-account`
-- `admin-update-role`
-- `admin-adding-user-for-reallocate`
-- `signup-login-logout-all-devices`
-- `signup-login-set-access-code`
-- `katchup-reference-messages-details`
-- `katchup-change-caption`
-- `katchup-upload-multipart-files`
-- `kdiary-get-event-date`
-- `profile-change-or-forgot-access-code`
-- `profile-change-password`
-- `knews-feed-articles`
-
-## authorization — 60% (75/125)
-
-an endpoint that names a record (an id) is tried by a stranger, with the owner's call as control.
-
-**takes an id; no cross-user spec names it** (50)
-
-- `common-update-company-logo` — takes body.companyID, body.text.companyID; no cross-user spec names it
-- `common-download-company-logo` — takes path.companyID; no cross-user spec names it
-- `common-remove-company-logo` — takes body.companyID; no cross-user spec names it
-- `admin-reset-password` — takes body.kpostID, body.companyID, body.countryID; no cross-user spec names it
-- `katchup-messages-subject` — takes path.id; no cross-user spec names it
-- `katchup-deleted-message-ids` — takes path.lastMsgID; no cross-user spec names it
-- `katchup-send-multipart` — takes body.sessionID, body.temporaryMsgID; no cross-user spec names it
-- `katchup-send-bulk` — takes body.sessionID, body.temporaryMsgID, body.uuid[]; no cross-user spec names it
-- `katchup-send-bulk-multipart` — takes body.sessionID, body.temporaryMsgID; no cross-user spec names it
-- `katchup-send-forward-selected-attachment` — takes body.sessionID, body.temporaryMsgID, body.uuid[]; no cross-user spec names it
-- `katchup-save-messages` — takes body.groupKpostID, body.msgIDs[]; no cross-user spec names it
-- `katchup-forward-message-new` — takes body.sessionID, body.temporaryMsgID, body.uuid[]; no cross-user spec names it
-- `katchup-forward-multiple` — takes body.uuid[], body.sessionID; no cross-user spec names it
-- `katchup-forward-backtrack` — takes body.msgID; no cross-user spec names it
-- `katchup-patch-work-for-group` — takes body.msgIDs; no cross-user spec names it
-- `katchup-voice-translate` — takes body.uuid; no cross-user spec names it
-- `kall-dashboard` — takes body.kallID; no cross-user spec names it
-- `kall-info` — takes body.contactID, body.kallID; no cross-user spec names it
-- `contacts-add` — takes body.contactID; no cross-user spec names it
-- `contacts-add-multiple` — takes body.contactID; no cross-user spec names it
-- `contacts-add-reference` — takes body.contactID; no cross-user spec names it
-- `contacts-delete` — takes body.contactID; no cross-user spec names it
-- `contacts-block` — takes body.contactID; no cross-user spec names it
-- `contacts-block-multiple` — takes body.contactIDs[]; no cross-user spec names it
-- `contacts-import-phone` — takes body.deviceID; no cross-user spec names it
-- `profile-user-profile-by-kpostid` — takes body.kpostID; no cross-user spec names it
-- `profile-user-basic-by-kpostid` — takes body.countryID; no cross-user spec names it
-- `profile-digital-card` — takes body.contactID; no cross-user spec names it
-- `profile-download-image` — takes path.kpostID; no cross-user spec names it
-- `profile-download-full-image` — takes path.kpostID; no cross-user spec names it
-- `profile-download-cover` — takes path.kpostID; no cross-user spec names it
-- `profile-share-user-details` — takes body.kpostID; no cross-user spec names it
-- `profile-save-school` — takes body.schoolDetails[].schoolID; no cross-user spec names it
-- `profile-save-university` — takes body.universityDetails[].universityID; no cross-user spec names it
-- `profile-save-experience` — takes body.experienceDetails[].experienceID; no cross-user spec names it
-- `profile-delete-school` — takes body.schoolID; no cross-user spec names it
-- `profile-delete-university` — takes body.universityID; no cross-user spec names it
-- `profile-delete-experience` — takes body.experienceID; no cross-user spec names it
-- `dashboard-home-msgs` — takes body.lastMsgID; no cross-user spec names it
-- `dashboard-home-new-msgs` — takes body.firstMsgID; no cross-user spec names it
-- `kbooking-destinations` — takes body.sourceCityID; no cross-user spec names it
-- `kbooking-available-trips` — takes body.sourceCityID, body.destinationCityID; no cross-user spec names it
-- `kbooking-trip-details` — takes body.tripID; no cross-user spec names it
-- `kbooking-boarding-point` — takes body.boardingID, body.tripID; no cross-user spec names it
-- `kbooking-trip-details-v2` — takes body.inventoryId; no cross-user spec names it
-- `knews-sub-categories` — takes body.categoryId; no cross-user spec names it
-- `knews-publications` — takes body.languageId; no cross-user spec names it
-- `knews-feed-articles` — takes path.feedId; no cross-user spec names it
-- `knews-admin-feed-enable` — takes path.feedId; no cross-user spec names it
-- `knews-admin-feed-disable` — takes path.feedId; no cross-user spec names it
-
-## security — 91.1% (224/246)
-
-injection, XSS, headers and data-exposure probes run on it.
-
-**not cleared to run on the QA server (no productionSafe)** (22)
-
-- `common-update-company-logo`
-- `common-download-company-logo`
-- `common-remove-company-logo`
-- `admin-adding-user-by-admin`
+- `admin-display-name-suggestion`
+- `admin-kpostid-designation-suggestion`
+- `admin-reset-password`
 - `admin-terminate-user`
-- `admin-hold-or-release`
-- `admin-create-remove-backup-admin`
-- `admin-update-company-details`
 - `admin-update-bank-account`
-- `admin-update-role`
-- `admin-adding-user-for-reallocate`
-- `signup-login-admin-user-login`
-- `signup-login-generate-jwt`
-- `signup-login-logout-all-devices`
-- `signup-login-set-access-code`
-- `katchup-reference-messages-details`
-- `katchup-change-caption`
-- `katchup-upload-multipart-files`
-- `kdiary-get-event-date`
-- `profile-change-or-forgot-access-code`
-- `profile-change-password`
-- `knews-feed-articles`
-
-## performance — 91.1% (224/246)
-
-its response time and size are measured on the QA server.
-
-**not cleared to run on the QA server (no productionSafe)** (22)
-
-- `common-update-company-logo`
-- `common-download-company-logo`
-- `common-remove-company-logo`
-- `admin-adding-user-by-admin`
-- `admin-terminate-user`
-- `admin-hold-or-release`
-- `admin-create-remove-backup-admin`
-- `admin-update-company-details`
-- `admin-update-bank-account`
-- `admin-update-role`
-- `admin-adding-user-for-reallocate`
-- `signup-login-admin-user-login`
-- `signup-login-generate-jwt`
-- `signup-login-logout-all-devices`
-- `signup-login-set-access-code`
-- `katchup-reference-messages-details`
-- `katchup-change-caption`
-- `katchup-upload-multipart-files`
-- `kdiary-get-event-date`
-- `profile-change-or-forgot-access-code`
-- `profile-change-password`
-- `knews-feed-articles`
-
-## data-integrity — 14% (22/157)
-
-a write is checked in the database (a DB validation, or a DB-asserted spec).
-
-**no database check of what it stored** (135)
-
-- `common-forgot-password-otp`
-- `common-forgot-password-update`
-- `common-mobile-no-exist`
-- `common-mobile-no-exist-in-company`
-- `common-user-details-by-mobile`
-- `common-kpost-id-using-module`
-- `common-unique-name-exist`
+- `aws-check-attachment`
+- `aws-check-attachment-get`
+- `aws-delete-attachment`
+- `common-company-details`
+- `common-company-details-by-admin`
+- `common-company-details-by-mobile-and-product`
+- `common-company-name-exist`
+- `common-country`
+- `common-designation`
 - `common-domain`
+- `common-forgot-password-otp`
 - `common-generate-domain-and-unique-name`
 - `common-is-company-name-exist`
-- `common-company-details`
-- `common-company-details-by-mobile-and-product`
-- `common-update-company-logo`
+- `common-kpost-id-using-module`
+- `common-languages`
+- `common-pincode`
+- `common-postal-pincode`
 - `common-remove-company-logo`
-- `common-update-flutter-app-version`
-- `common-save-enquiry-details`
-- `common-total-count-by-date`
-- `common-send-message`
-- `admin-kpostid-designation-suggestion`
-- `admin-display-name-suggestion`
-- `admin-adding-user-by-admin`
-- `admin-terminate-user`
-- `admin-reset-password`
-- `admin-hold-or-release`
-- `admin-create-remove-backup-admin`
-- `admin-update-company-details`
-- `admin-update-bank-account`
-- `admin-update-role`
-- `admin-adding-user-for-reallocate`
-- `signup-login-fetch-personal-user-details`
+- `common-unique-name-exist`
+- `common-user-details-by-mobile`
+- `common-validate-mail-otp`
+- `contacts-block`
+- `contacts-block-multiple`
+- `contacts-delete`
+- `contacts-global-search`
+- `contacts-import-phone`
+- `contacts-search-details`
+- `contacts-update-invite`
+- `dashboard-home-msgs`
+- `dashboard-home-new-msgs`
+- `dashboard-kall-history`
+- `dashboard-katchup-msg`
+- `group-delete`
+- `group-details-by-id`
+- `group-leave`
+- `group-remove-image`
+- `group-update-image`
+- `kall-contact-info`
+- `kall-dashboard`
+- `kall-end-individual`
+- `kall-fetch-scheduled-repeat`
+- `kall-info`
+- `kall-join-schedule`
+- `katchup-conversation`
+- `katchup-download`
+- `katchup-download-attachment`
+- `katchup-download-from-s3`
+- `katchup-download-thumbnail`
+- `katchup-filter-message`
+- `katchup-generate-thumbnail`
+- `katchup-global-search`
+- `katchup-legacy-recall-message`
+- `katchup-media-streaming`
+- `katchup-message-count`
+- `katchup-messages-by-reference`
+- `katchup-messages-subject`
+- `katchup-old-download`
+- `katchup-reference-details`
+- `katchup-save-messages`
+- `katchup-search-message`
+- `katchup-search-subject`
+- `katchup-voice-translate`
+- `kbooking-block-ticket`
+- `kbooking-boarding-point`
+- `kbooking-city-suggestion`
+- `kbooking-destinations`
+- `kbooking-trip-details`
+- `kbooking-trip-details-v2`
+- `kdiary-add-participants`
+- `kdiary-delete-event`
+- `kdiary-delete-report`
+- `kdiary-update-event`
+- `knews-publications`
+- `knews-sub-categories`
+- `profile-advanced-search`
+- `profile-auto-search`
+- `profile-convert-base64`
+- `profile-delete-college`
+- `profile-delete-experience`
+- `profile-delete-other-activity`
+- `profile-delete-school`
+- `profile-delete-university`
+- `profile-designation-or-profession`
+- `profile-digital-card`
+- `profile-download-cover`
+- `profile-download-full-image`
+- `profile-download-image`
+- `profile-forgot-password-or-kpostid`
+- `profile-is-device-primary`
+- `profile-kmail-password-patch-work`
+- `profile-save-college`
+- `profile-save-experience`
+- `profile-save-other-activity`
+- `profile-save-school`
+- `profile-save-university`
+- `profile-send-device-otp`
+- `profile-update-about`
+- `profile-user-basic-by-kpostid`
+- `profile-user-profile-by-kpostid`
+- `settings-change-theme`
+- `settings-font`
+- `settings-kall-notification`
+- `settings-katchup-notification`
+- `settings-kmail-notification`
 - `signup-login-fetch-user-details`
-- `signup-login-user-login`
-- `signup-login-admin-user-login`
 - `signup-login-generate-jwt`
 - `signup-login-login-history`
 - `signup-login-user-logout`
-- `signup-login-set-access-code`
-- `signup-login-signup`
-- `signup-login-admin-registration`
-- `signup-login-kpost-id-suggestions`
-- `signup-login-business-adding-user-public`
-- `katchup-send-multipart`
-- `katchup-send-bulk`
-- `katchup-send-bulk-multipart`
-- `katchup-send-forward-selected-attachment`
-- `katchup-legacy-recall-message`
-- `katchup-mark-important`
-- `katchup-save-messages`
-- `katchup-report-abuse`
-- `katchup-forward-message-new`
-- `katchup-forward-message`
-- `katchup-forward-multiple`
-- `katchup-forward-backtrack`
-- `katchup-change-caption`
-- `katchup-patch-work-for-group`
-- `katchup-voice-translate`
-- `katchup-upload-multipart-files`
-- `katchup-generate-thumbnail`
-- `group-create`
-- `group-add-user`
-- `group-remove-member`
-- `group-remove-member-v1-legacy`
-- `group-leave`
-- `group-admin-access`
-- `group-edit-name`
-- `group-delete`
-- `group-update-image`
-- `group-remove-image`
-- `kall-update-sender-receiver-status`
-- `kall-clear-by-ids`
-- `kall-reschedule`
-- `kall-scheduled-repeat`
-- `kall-modify-members`
-- `kall-legacy-set-status`
-- `kall-legacy-cancel-schedule`
-- `kall-legacy-remove-member`
-- `contacts-add-multiple`
-- `contacts-block-multiple`
-- `contacts-import-phone`
-- `contacts-update-invite`
-- `settings-kmail-notification`
-- `settings-kall-notification`
-- `kdiary-create-event`
-- `kdiary-create-schedule`
-- `kdiary-update-event`
-- `kdiary-edit-schedule-event`
-- `kdiary-delete-event`
-- `kdiary-add-participants`
-- `kdiary-update-remarks`
-- `kdiary-save-report`
-- `kdiary-edit-report`
-- `kdiary-delete-report`
-- `aws-generate-presigned`
-- `aws-katchup-presigned`
-- `aws-check-attachment`
-- `profile-set-profile-privacy`
-- `profile-kmail-password-patch-work`
-- `profile-change-or-forgot-access-code`
-- `profile-update-designation`
-- `profile-update-basic`
-- `profile-update-contact`
-- `profile-share-user-details`
-- `profile-save-college`
-- `profile-save-school`
-- `profile-save-university`
-- `profile-save-other-activity`
-- `profile-save-experience`
-- `profile-delete-college`
-- `profile-delete-school`
-- `profile-delete-university`
-- `profile-delete-experience`
-- `profile-delete-other-activity`
-- `profile-update-image`
-- `profile-upload-cover`
-- `profile-upload-attachments`
-- `profile-upload-image-s3`
-- `profile-update-signature`
-- `profile-convert-base64`
-- `profile-set-device-primary`
-- `profile-update-device-primary`
-- `profile-set-device-secondary`
-- `profile-update-device-secondary`
-- `profile-change-password`
-- `profile-forgot-password-or-kpostid`
-- `profile-deactivate-account`
-- `kbooking-trip-details`
-- `kbooking-boarding-point`
-- `kbooking-trip-details-v2`
-- `kbooking-block-ticket`
-- `knews-sub-categories`
-- `knews-publications`
-- `knews-update-settings`
-- `knews-admin-feed-sync`
-- `knews-admin-feed-enable`
-- `knews-admin-feed-disable`
 
-## business-rules — 82.2% (129/157)
+**Limited inputs the QA guard keeps edge values out of** (23; mobile numbers, e-mails, company names, numeric record ids)
+
+- `admin-adding-user-by-admin` body.companyID
+- `admin-adding-user-by-admin` body.mobileNumber
+- `admin-bank-and-company-details` path.companyID
+- `admin-update-company-details` body.companyName
+- `admin-user-management-details` path.companyID
+- `common-download-company-logo` path.companyID
+- `common-mobile-no-exist` body.mobileNumber
+- `common-mobile-no-exist-in-company` body.mobileNumber
+- `common-save-enquiry-details` body.companyName
+- `common-save-enquiry-details` body.email
+- `common-save-enquiry-details` body.mobileNumber
+- `common-send-otp` body.mobileNumber
+- `common-send-otp-to-mail` body.otherEmail
+- `common-update-company-logo` body.companyID
+- `common-validate-otp` body.mobileNumber
+- `profile-update-basic` body.otherEmail
+- `profile-update-contact` body.alternateMobileno
+- `signup-login-admin-registration` body.companyName
+- `signup-login-admin-registration` body.mobileNumber
+- `signup-login-admin-registration` body.otherEmail
+- `signup-login-kpost-id-exist` body.mobileNumber
+- `signup-login-kpost-id-suggestions` body.mobileNumber
+- `signup-login-signup` body.mobileNumber
+
+**every call is refused before any limit: the server reads reportCode while the app and the workbook send reportID (a logged defect)** (1)
+
+- `katchup-report-abuse`
+
+**the route reads only a multipart text part and no client calls it, while the boundary validators mutate JSON bodies** (1)
+
+- `katchup-forward-message`
+
+**not cleared to run on the QA server (no productionSafe)** (1)
+
+- `knews-feed-articles`
+
+## authentication — 99.5% (185/186)
+
+a login-protected endpoint is sent no, forged, expired and malformed tokens.
+
+**not cleared to run on the QA server (no productionSafe)** (1)
+
+- `knews-feed-articles`
+
+## authorization — 100% (102/102)
+
+an endpoint that names a record (an id) is tried by a stranger, with the owner's call as control.
+
+**Not counted: files every signed-in user may read by design** (4; their login check is the authentication type's)
+
+- `profile-download-image` — a user's profile photo, shown wherever their name appears
+- `profile-download-full-image` — a user's full-size profile photo, opened from that photo
+- `profile-download-cover` — a user's profile cover image, shown on their profile
+- `common-download-company-logo` — a company's logo, shown beside its members
+
+**Input keys that end in "id" but name no one's record** (an endpoint whose only ids are these is not counted)
+
+- `sessionID` — the client's own session label (the web app sends 'Web-Reactjs')
+- `temporaryMsgID` — the client's own counter for matching its send to the server's answer
+- `deviceID` — the caller's own device, sent with its own phone book
+- `countryID` — the public country list
+- `sourceCityID` — the booking partner's public city list
+- `destinationCityID` — the booking partner's public city list
+- `tripID` — the booking partner's public trip search result
+- `boardingID` — the booking partner's public boarding points of a trip
+- `inventoryId` — the booking partner's public trip inventory
+- `categoryId` — the public news category list
+- `languageId` — the public news language list
+- `feedId` — the public news feed list
+
+No gap.
+
+## security — 99.1% (222/224)
+
+injection, XSS, headers and data-exposure probes run on it.
+
+**not cleared to run on the QA server (no productionSafe)** (2)
+
+- `signup-login-generate-jwt`
+- `knews-feed-articles`
+
+## performance — 99.1% (222/224)
+
+its response time and size are measured on the QA server.
+
+**not cleared to run on the QA server (no productionSafe)** (2)
+
+- `signup-login-generate-jwt`
+- `knews-feed-articles`
+
+## data-integrity — 97.1% (100/103)
+
+a write is checked in the database (a DB validation, or a DB-asserted spec).
+
+**Not counted: writes that store nothing in the database** (5)
+
+- `katchup-generate-thumbnail` — uploads a thumbnail to S3 in the background only (AWSs3ClientServiceImpl.java:934)
+- `profile-upload-cover` — writes the cover image to S3 only
+- `profile-upload-image-s3` — writes the image to S3 only
+- `profile-convert-base64` — converts and uploads to S3 only
+- `profile-share-user-details` — a read (its only row is the audit log entry)
+
+**Counted although declared a read: they store a row**
+
+- `signup-login-user-login` — opens a login session row (the KPOSTLogin procedure) and a history row
+- `signup-login-admin-user-login` — opens a login session row, as userLogin does
+- `aws-generate-presigned` — saves the KMail attachment row (PreSignedURLServiceImpl.java:185) before the upload
+- `aws-katchup-presigned` — saves the Katchup attachment row (PreSignedURLServiceImpl.java:293) before the upload
+
+**no database check of what it stored** (3)
+
+- `katchup-forward-message`
+- `profile-upload-attachments`
+- `profile-update-signature`
+
+## business-rules — 100% (112/112)
 
 a write has its product rule checked by the end result (a rule spec or a lifecycle).
 
-**no rule or lifecycle drives it** (28)
+**Not counted: writes no client calls (no screen, no product rule)** (4)
 
-- `common-is-company-name-exist`
-- `common-update-flutter-app-version`
-- `common-send-message`
-- `admin-kpostid-designation-suggestion`
-- `admin-display-name-suggestion`
-- `signup-login-fetch-personal-user-details`
-- `signup-login-fetch-user-details`
-- `signup-login-admin-user-login`
-- `signup-login-generate-jwt`
-- `signup-login-login-history`
-- `signup-login-kpost-id-suggestions`
-- `signup-login-business-adding-user-public`
-- `katchup-legacy-recall-message`
-- `katchup-forward-message`
-- `katchup-change-caption`
-- `katchup-patch-work-for-group`
-- `katchup-voice-translate`
-- `group-remove-member-v1-legacy`
-- `kall-legacy-set-status`
-- `kall-legacy-cancel-schedule`
-- `kall-legacy-remove-member`
-- `profile-set-profile-privacy`
-- `profile-kmail-password-patch-work`
-- `profile-forgot-password-or-kpostid`
-- `knews-publications`
-- `knews-admin-feed-sync`
-- `knews-admin-feed-enable`
-- `knews-admin-feed-disable`
+- `katchup-legacy-recall-message` — the pre-V2 /katchup/recallMessage; zero frontend callers (its definition, confirmed 2026-10-05)
+- `katchup-forward-message` — the older /v2/katchup/forwardKatchupMessage/; the web app forwards through forwardKatchupMessageNew
+- `katchup-change-caption` — a one-off migration (KatchupServiceImpl.captionChange) no client calls; its rewrite is checked by the stored row
+- `group-remove-member-v1-legacy` — the pre-V2 /group/removeGroupMember/; the web app calls /v2/group/removeGroupMember (Katchup.js:1064, ServiceURL.js:34)
+
+No gap.

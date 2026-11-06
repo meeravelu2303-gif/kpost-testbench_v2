@@ -2,6 +2,7 @@ import { testData } from '@config/test-data.config';
 import { ProductionSafetyError } from '@engine/production-guard';
 import { recordCreatedAccount } from '@fixtures/created-accounts';
 import { expect, test } from '@fixtures';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * Signup and password-recovery chains end to end. Runs only on the OTP test gateway
@@ -332,6 +333,35 @@ test.describe(
       expect
         .soft(signup.status, 'adminRegistration answered (created or already-exists, not a 5xx)')
         .toBeLessThan(500);
+      // Only a 200 wrote this run (a re-run answers "already exists"). SignUpLoginServiceImpl.java:
+      // 2042-2064 saves the company's registration row from the body (unique name lower-cased).
+      if (signup.status === 200)
+        await expectStored(
+          database,
+          'signup-login-admin-registration',
+          {
+            table: 'TBL_KPOST_ADMIN_REGISTRATION',
+            where: { kpost_id: testData.businessSignupKpostId },
+            columns: {
+              company_name: testData.businessSignupCompanyName,
+              type_of_company: 'BUSINESS_M',
+              entity: 'Vegetable Shop',
+              unique_name: testData.businessSignupUniqueName.toLowerCase(),
+              first_name: 'QA',
+              last_name: 'Bench',
+              designation: 'Managing Director',
+              mobile_number: testData.businessSignupMobile,
+              address1: '39 Chettinad Chamber',
+              address2: 'Dr. Radhakrishnan Salai',
+              city: 'Chennai',
+              state: 'TamilNadu',
+              country: 'india',
+              pin_code: testData.pinCode,
+            },
+            rule: 'adminRegistration stores the company’s name, type, unique name, contact and address as sent',
+          },
+          endpoints,
+        );
 
       const exists = await endpoints.sendTo(
         'signup-login-kpost-id-exist',
@@ -379,6 +409,7 @@ test.describe(
 
     test('forgot-password OTP → set a new password on the spare account @api', async ({
       endpoints,
+      databases,
     }) => {
       // Rewrites a password, so it runs only on an explicitly configured spare account; the default
       // id deliberately does not exist.
@@ -419,6 +450,17 @@ test.describe(
       );
       expect.soft(validate.status, 'forgot-password OTP validated').toBeLessThan(500);
 
+      // The stored hash before the reset, so the check below can tell a fresh one was written.
+      const userDb = databases.for('kpost-api');
+      const hashBefore = userDb.enabled
+        ? (
+            await userDb.findOne<{ password: string | null }>({
+              table: 'TBL_KPOST_USER_MASTER',
+              where: { kpost_id: testData.forgotPasswordKpostId },
+            })
+          )?.password
+        : undefined;
+
       // Idempotent: resets the spare to QA_PASSWORD, so it never locks the account out.
       const update = await endpoints.sendTo(
         'common-forgot-password-update',
@@ -426,6 +468,23 @@ test.describe(
         { label: 'feature:otp:forgot-update' },
       );
       expect.soft(update.status, 'forgotPasswordUpdate answered (not a 5xx)').toBeLessThan(500);
+      if (update.status === 200 && hashBefore)
+        // UserProfileDaoImpl.java:343-344 hashes forgotPassword with a fresh salt, :360 writes it, so
+        // the same password still leaves a new bcrypt value. Only "changed and hashed" is compared.
+        await expectStored(
+          userDb,
+          'common-forgot-password-update',
+          {
+            table: 'TBL_KPOST_USER_MASTER',
+            where: { kpost_id: testData.forgotPasswordKpostId },
+            columns: {
+              password: (value: unknown) =>
+                typeof value === 'string' && value.startsWith('$2') && value !== hashBefore,
+            },
+            rule: 'forgotPasswordUpdate writes a new bcrypt password hash for the account it names',
+          },
+          endpoints,
+        );
     });
   },
 );

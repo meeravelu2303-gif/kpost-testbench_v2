@@ -57,7 +57,12 @@ test.describe('Backend-source input limits @framework', () => {
       for (const id of sourceLimitIds(suite)) {
         for (const [field, limits] of Object.entries(sourceLimits(suite, id)!)) {
           if (!/^(body|query|path)\./.test(field)) bad.push(`${id} ${field}: unknown section`);
-          for (const [keyword, limit] of Object.entries(limits)) {
+          const { none, ...keywords } = limits;
+          if (none && (!none.reason || !/:\d+/.test(none.source)))
+            bad.push(`${id} ${field} none: no reason or no file:line citation`);
+          if (none && Object.keys(keywords).length)
+            bad.push(`${id} ${field}: both a limit and "none"`);
+          for (const [keyword, limit] of Object.entries(keywords)) {
             if (!limit.source || !/:\d+/.test(limit.source) || !limit.from)
               bad.push(`${id} ${field} ${keyword}: no file:line citation`);
             if (!Number.isInteger(limit.value) || limit.value < 0)
@@ -89,7 +94,8 @@ test.describe('Backend-source input limits @framework', () => {
             continue;
           }
           const at = schemaAt(toJsonSchema(raw), limitSteps(field.slice(dot + 1)));
-          for (const [keyword, limit] of Object.entries(limits)) {
+          const { none: _none, ...keywords } = limits;
+          for (const [keyword, limit] of Object.entries(keywords)) {
             if (at?.[keyword] === limit.value) landed++;
             else missing.push(`${id} ${field} ${keyword}`);
           }

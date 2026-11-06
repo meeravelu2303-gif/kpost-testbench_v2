@@ -1,6 +1,8 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { isSqlClient } from '@database/database-client';
+import { text } from '@database/kpost-assertions';
 import { expect, test } from '@fixtures';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * Katchup uploadMultipartFiles (KatchupServiceImpl.fileUploadMultipartFile): the S3 upload is
@@ -50,8 +52,26 @@ test.describe(
           'SELECT original_file_name name, file_size size FROM TBL_KPOST_KATCHUP_ATTACHMENT WHERE uuid = ?',
           [uuid],
         );
-        expect.soft(row?.name, 'the attachment row records the file name').toBe('qa-bench.txt');
-        expect.soft(Number(row?.size ?? 0), 'and its size').toBe(FILE.length);
+        if (upload.status === 200 && uuid)
+          // KatchupServiceImpl.java:1449 saves the rows AWSs3ClientServiceImpl.fileUploadMultipartFile
+          // fills (kpost_id, the original file name, the size in bytes as text), keyed by the uuid.
+          await expectStored(
+            db,
+            'katchup-upload-multipart-files',
+            {
+              table: 'TBL_KPOST_KATCHUP_ATTACHMENT',
+              where: { uuid },
+              columns: {
+                kpost_id: (value: unknown) =>
+                  text(value)?.toLowerCase() === UPLOADER!.username.toLowerCase(),
+                original_file_name: 'qa-bench.txt',
+                file_size: String(FILE.length),
+                delete_status: false,
+              },
+              rule: 'uploadMultipartFiles records each accepted file for the caller with its name and size',
+            },
+            endpoints,
+          );
 
         const download = await endpoints.sendTo(
           'katchup-download-attachment',

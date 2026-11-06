@@ -5,8 +5,10 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { testData } from '@config/test-data.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 import { scheduleShape } from '@api/definitions/kpost/kdiary/write.api';
+import { expectStored, filled } from '../../../support/db-stored';
 
 /**
  * KDiary feature flow: every diary write end to end on our own account. Gated by KDIARY_LIFECYCLE=true
@@ -71,7 +73,7 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
   test(
     'every diary write, end to end (create → update → participants → remarks → reports → delete) @api @kdiary',
     { tag: '@sanity' },
-    async ({ endpoints, databases }) => {
+    async ({ endpoints, databases, validationEngine }) => {
       const database = databases.for('kpost-api');
       try {
         const createTitle = `QA Bench ${Date.now()}`;
@@ -97,17 +99,52 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
           // title holds plain text here; no decoding needed.
           expect.soft(row?.title, 'the stored title matches what was sent').toBe(createTitle);
         }
+        if (created.status < 300 && eventID)
+          // KdiaryScheduleServiceImpl.java:140-176 copies the sent fields onto the row; created_by is the token's user.
+          await expectStored(
+            database,
+            'kdiary-create-event',
+            {
+              table: 'TBL_KPOST_KDIARY_SCHEDULE',
+              where: { event_id: eventID },
+              columns: {
+                title: createTitle,
+                description: 'QA bench diary event',
+                priority: 1,
+                reminder: false,
+                kool_kall: false,
+                created_by: A.username,
+              },
+              rule: 'createEvent stores the event with the title, description and flags it was sent, owned by the caller',
+            },
+            endpoints,
+          );
 
-        // createSchedule — the sibling create (frontend-unused).
+        // createSchedule — the sibling create (frontend-unused). It returns no id, so a unique title
+        // ("QA Bench …", still swept) finds its row.
+        const schedTitle = `QA Bench schedule ${Date.now()}`;
         const sched = await write(
           endpoints,
           'kdiary-create-schedule',
-          scheduleShape(),
+          scheduleShape({ title: schedTitle }),
           'create-sched',
         );
         expect
           .soft(sched.status, 'createSchedule returns a status (frontend-unused)')
           .toBeLessThan(600);
+        if (sched.status < 300)
+          // KdiaryScheduleController.java:181 + KdiaryScheduleServiceImpl.java:74 save the body as sent, created_by from the token.
+          await expectStored(
+            database,
+            'kdiary-create-schedule',
+            {
+              table: 'TBL_KPOST_KDIARY_SCHEDULE',
+              where: { created_by: A.username, title: schedTitle },
+              columns: { description: 'QA bench diary event', priority: 1, kool_kall: false },
+              rule: 'createSchedule stores the schedule with the title and description it was sent, owned by the caller',
+            },
+            endpoints,
+          );
 
         if (eventID) {
           const steps: Array<[string, Record<string, unknown>, string]> = [
@@ -134,6 +171,49 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
             expect
               .soft(r.status, `${label} status`)
               .toBeLessThan(clientUsed.has(label) ? 300 : 600);
+
+            // What each accepted write stored (no check on a refused call).
+            if (r.status < 300 && id === 'kdiary-update-event')
+              // KdiaryScheduleServiceImpl.java:230-242 re-saves only type (repeat flags) and modified_date;
+              // createEvent leaves modified_date null, so a value proves the save.
+              await expectStored(
+                database,
+                'kdiary-update-event',
+                {
+                  table: 'TBL_KPOST_KDIARY_SCHEDULE',
+                  where: { event_id: eventID },
+                  columns: { modified_date: filled, created_by: A.username },
+                  rule: 'updateEvent re-saves the caller’s event and stamps modified_date',
+                },
+                endpoints,
+              );
+            if (r.status < 300 && id === 'kdiary-update-remarks')
+              // KdiaryScheduleRepository.java:27-29 sets remarks and remarks_description on the caller's events.
+              await expectStored(
+                database,
+                'kdiary-update-remarks',
+                {
+                  table: 'TBL_KPOST_KDIARY_SCHEDULE',
+                  where: { event_id: eventID, created_by: A.username },
+                  columns: { remarks: 1, remarks_description: 'Completed by QA' },
+                  rule: 'updateScheduleRemarks stores the remarks code and description it was sent',
+                },
+                endpoints,
+              );
+            const savedReportId = (r.body.data as { id?: unknown } | undefined)?.id;
+            if (r.status < 300 && id === 'kdiary-save-report' && typeof savedReportId === 'number')
+              // KdiaryScheduleServiceImpl.java:430-436 saves task_report and created_by (the token's user).
+              await expectStored(
+                database,
+                'kdiary-save-report',
+                {
+                  table: 'TBL_KPOST_KDIARY_REPORT',
+                  where: { id: savedReportId },
+                  columns: { task_report: 'QA bench report', created_by: A.username },
+                  rule: "saveReport stores the report text it was sent as the caller's report",
+                },
+                endpoints,
+              );
           }
 
           // update-remarks must persist both fields.
@@ -186,6 +266,31 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
               'edit-report',
             );
             expect.soft(edited.status, 'edit-report status').toBeLessThan(300);
+            if (edited.status < 300)
+              // KdiaryScheduleServiceImpl.java:483-488 sets task_report, modified_by and modified_date.
+              await expectStored(
+                database,
+                'kdiary-edit-report',
+                {
+                  table: 'TBL_KPOST_KDIARY_REPORT',
+                  where: { id: reportId, created_by: A.username },
+                  columns: {
+                    task_report: 'QA bench report edited',
+                    modified_by: A.username,
+                    modified_date: filled,
+                  },
+                  rule: 'editReport stores the new report text and who edited it',
+                },
+                endpoints,
+              );
+            // The full engine on this real report (the sweep's id names none: 404 before any limit,
+            // found live 2026-11-05); its last re-send puts this same text back.
+            await checkOnRealRecord(
+              validationEngine,
+              'kdiary-edit-report',
+              { body: { id: reportId, taskReport: 'QA bench report edited' } },
+              [reportId],
+            );
 
             // Ownership: an unrelated account cannot delete our report (404); our own delete below
             // is the control that the same call works for the owner.
@@ -219,6 +324,19 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
               'delete-report',
             );
             expect.soft(removed.status, 'deleteReport removes our own report of today').toBe(200);
+            if (removed.status === 200)
+              // KdiaryScheduleServiceImpl.java:525 hard-deletes the report (deleteById).
+              await expectStored(
+                database,
+                'kdiary-delete-report',
+                {
+                  table: 'TBL_KPOST_KDIARY_REPORT',
+                  where: { id: reportId },
+                  absent: true,
+                  rule: "deleteReport removes the caller's report row",
+                },
+                endpoints,
+              );
             const after = await endpoints
               .sendTo(
                 'kdiary-today-report',
@@ -237,6 +355,20 @@ test.describe('KPost KDiary · feature flow', { tag: ['@api', '@verticals', '@re
             'delete-event',
           );
           expect.soft(deleted.status, 'deleteEvent is accepted').toBeLessThan(300);
+          if (deleted.status < 300)
+            // KdiaryScheduleServiceImpl.java:375 → KdiaryScheduleRepository.java:56 deleteByEventID: a hard
+            // delete (Spring Data derived delete; the participants go by cascade).
+            await expectStored(
+              database,
+              'kdiary-delete-event',
+              {
+                table: 'TBL_KPOST_KDIARY_SCHEDULE',
+                where: { event_id: eventID },
+                absent: true,
+                rule: "deleteEvent removes the caller's event row",
+              },
+              endpoints,
+            );
           if (database.enabled) {
             const afterDelete = await database.findOne<{ delete_by_sender: number | null }>({
               table: 'TBL_KPOST_KDIARY_SCHEDULE',

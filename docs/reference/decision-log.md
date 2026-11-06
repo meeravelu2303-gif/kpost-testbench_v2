@@ -3,7 +3,275 @@
 Moved verbatim out of `CLAUDE.md` §8 on 2026-10-09 so CLAUDE.md stays short. Newest first.
 Each entry records the decision, not just the change. Add new entries at the top.
 
-### 2026-11-05 (latest) — QA guard lets provably-malformed ids through; negative 70% → 87%
+### 2026-11-05 (latest) — Business rules 82.8% → 100%; shared-state writes get boundary values from their own flows
+
+Owner: "Yes, continue" (to: business rules next, and boundary values for the shared-state writes).
+
+- **Business-rules ledger made exact:**
+  - A POST lookup changes nothing, so it is not counted.
+  - Owner-walled and outside-paid routes are walled.
+  - `NO_CLIENT` lists four writes no client calls (React and Flutter sources checked): the pre-V2 legacy
+    recall, the older forwardKatchupMessage, the changeCaption migration, and the pre-V2 removeGroupMember
+    (the web app calls `/v2/group/removeGroupMember`). Their security and stored-row checks still run.
+- **New rule spec, `common-send-message`** (business-rules/common): the phone app's "forward selected
+  attachments" first step (katchup_api.dart:1310-1328). It stores a hidden type-24 record from the
+  logged-in user with exactly the picked attachment, whatever sender the body names. The client then
+  forwards that record through forwardKatchupMessageNew (web ForwardFooter.js:467-545).
+  - The 1:1 conversation hides type 24 by design (KatchupDaoImpl, backend commit 8bc433cc). A first
+    version of the test expected the recipient to see the record; reading the client showed that was the
+    wrong rule.
+  - Live: passes, and the stored row matches. This also closes the endpoint's data-integrity gap (97.1%).
+- **`boundaryInFlow`** (flow-negative.ts), next to every `negativeInFlow` call. It sends the engine's own
+  edge values (`boundaryValueStrategy` and `boundaryAcceptStrategy`, now exported) with the flow's own
+  options: just outside must be refused, exactly at must not crash. It then re-sends the flow's normal
+  request so the record is put back. The ledger credits a shared-state write named in such a spec: boundary
+  95.8%, walled 31 → 24.
+  - **Live: new 500s, all 3/3:**
+    - company 242 details: address lines 251, PAN 46, GST 61;
+    - hold/release `activeStatus` 11;
+    - update role 46;
+    - set-access-code `kpostID` 61 and `accessCode` 21;
+    - change-access-code `accessCode` 21.
+  - **Live: the at-limit values were all taken.**
+  - **Restore:** company 242 reads back exactly as before (checked directly), the logo restore passed, and
+    the cleanup scan found nothing left.
+
+### 2026-11-05 — Data integrity 14% → 96.1%; the admin member SMS routes, decided by the owner
+
+Owner: "Yes, start to data integrity".
+
+- **`expectStored(db, '<endpoint-id>', { table, where, columns | absent, rule }, endpoints)`**
+  (tests/support/db-stored.ts): right after a flow's own successful write, it reads the row it should
+  have produced (or removed) and compares each column, BLOBs decoded.
+  - A mismatch fails softly and is recorded as a finding.
+  - With no DB connection it says "not checked" and judges nothing.
+  - A secret column's value is never printed.
+  - The ledger credits the literal endpoint id. It is read-only, so it is safe after shared-state writes too.
+  - **Self-tested** (tests/framework/engine/db-stored.spec.ts).
+- **Clock measured, not assumed:** the QA DB and this PC run IST, but the backend writes some timestamps in
+  UTC (login_time read 5½ h behind), and the driver reads every DATETIME as local. `atOrAfter` accepts a
+  value read either way. Comparing against the bench clock without that would have raised false findings.
+- **Coverage:** 89 write endpoints in the existing flows gained read-backs: Katchup/AWS/Common, Profile/
+  Contacts/Settings, Signup/Admin/KNews, Group/Kall/KDiary. Each check cites its source save line.
+  Several older hand checks became `expectStored`.
+  - **Ledger:**
+    - a POST lookup is not a write;
+    - four declared reads that do store rows count (both logins, both presign routes);
+    - five writes that store nothing in the DB are listed and not counted (S3-only uploads; shareUserDetails).
+  - **Left (4):**
+    - `common-send-message` and the old forward route (no legitimate flow calls them);
+    - profile upload-attachments and update-signature (a success leaves files with no delete path, or
+      overwrites a signature that cannot be restored).
+- **The admin member SMS routes:** addingUserByAdmin (new KPost ID and a generated password,
+  SignUpLoginServiceImpl.java:1318) and terminateUser (a leaving notice, SignUpLoginDaoImpl.java:679) call
+  KpostSendSMS (smartsms.nettyfish.com) in the source, whatever the OTP bypass. They were briefly blocked in
+  every mode.
+  - **Owner, the same day:** "The sms is already mocked only so we can create the users and can test
+    existing users also".
+  - **Guard now:** both run only as a flow's opted-in call on the QA test server (GLOBAL_LIFECYCLE +
+    TEST_DB_MODE + allowGlobalLifecycle, no live host configured). Elsewhere they are blocked unless the
+    mobile cannot receive an SMS (`noSmsRecipient`). Self-tested in live-safety.spec.ts.
+  - **The two member specs run again.** Live: every read-back matched (add, backup admin on/off,
+    hold/release, role, terminate, reallocate). The flow fails only on the known 3/3 500s of hold/release
+    and backup-admin on bad input.
+  - **Ledger:** a spec skipped outright as `BLOCKED (whole spec):` now covers nothing. None is skipped that
+    way today.
+- **Source findings the agents reported, not yet filed:**
+  - **Requests the server rejects:**
+    - adminRegistration now requires maximumMembersCount, so the signup flow's business body is refused;
+    - saveEnquiryDetails now requires timeToContact;
+    - the legacy multipart send routes read `files` but get `file`;
+    - addMultipleContact takes an array (the flow now sends one).
+  - **Fields the server ignores or loses:**
+    - updateEvent ignores the event fields (only the repeat type is stored);
+    - the college and experience saves drop `fromYear`/`toYear` (the DAO reads `yearFrom`/`yearTo`);
+    - updateContactInformation nulls `alternate_mob_number` and `landline_number` when they are omitted.
+  - **Security:**
+    - access codes are stored in plain text;
+    - setAccessCode trusts the body's kpostID;
+    - the legacy recall answers 200 even on FAILURE (and the attack works).
+  - **Bench flow bugs:**
+    - the e2e kdiary-edit-schedule-event uses past dates and add-participants a string shape;
+    - the main group flow's admin-access sent `ids: [0]` (fixed in its real-record run).
+
+### 2026-11-05 — Boundary 9.8% → 95.4%: every input has a cited limit or "no limit", and every limit reaches a real record
+
+Update, same day:
+
+- **The ledger's real-record credit was too loose.** It credited every endpoint id mentioned anywhere in a
+  file that calls `checkOnRealRecord`, so the flow's own calls counted as engine runs. Now an id counts only
+  when it is the literal argument of `checkOnRealRecord(`, or is listed in `realRecordIds([...])` (a new
+  identity helper for the loops).
+  - **Effect:** three Katchup shared reads (shared-message info and details, messages by reference) had
+    been credited without being run. The negative, authentication, security and performance figures
+    reported earlier today were therefore about 1–2 points high. They are back to 99.5% / 99.5% / 99.1% /
+    99.1% only after the reads below.
+- **Live finding (focused boundary run):** an endpoint whose engine request names no real record answers
+  404/403/409 before any limit is read. Examples: group-edit-name 403, the Kall status updates 404,
+  kdiary-edit-report 404, group-add-user 409. Its edge values prove nothing.
+  - **Ledger:** such an endpoint (`needs-*` tag) counts only when a flow runs it on a real record. The two
+    Kall status writes were tagged `needs-kall-id`.
+- **New real-record engine runs**, each in the flow that owns the record:
+  - group-edit-name, add-user, admin-access and remove-member, on the lifecycle's own group (deleted after).
+  - Kall get-status, get-status-by-id and the two status updates, on the direct call (ended and cleared).
+  - kdiary-edit-report, on the real report.
+  - Katchup recall (a fresh message), mark-important, forward-message-new (the web body, now built by
+    `forwardBody()`), forward-multiple and forward-selected-attachment (a real attachment).
+  - The shared-message info and details, on genuinely shared messages, and messages-by-reference on the
+    #957 message (only when the sender's own call returns it).
+- **Live run, all flows' own checks held** (groups deleted, messages removed). Real crashes, all 3 out of 3:
+  - group-edit-name: null `groupKpostName`;
+  - recall: `status` as a string or int overflow;
+  - forward-selected-attachment: subject of 65,536 characters;
+  - kdiary-edit-report: `taskReport` of 65,536 characters;
+  - group image downloads: path `kpostID` of 61 characters.
+
+  The focused run also found these crashes:
+  - Katchup sends: subject 65,536, sessionID 51, selectedMembers 46;
+  - Kall: `kallMode` 128 on the schedules;
+  - presign: `extension` 64;
+  - login: latitude/longitude 36;
+  - fetchPersonalUserDetails: kpostID 60 and 61 (the audit column).
+
+  The known ones (address lines, pinCode, #611) dedupe at filing. Cleanup deleted the bench's rows and a
+  second scan found nothing left.
+
+- **Named gaps:**
+  - report-abuse: the server reads `reportCode` while the app and the workbook send `reportID`, a logged
+    drift. The bench keeps sending the app's body.
+  - The old forwardKatchupMessage route reads only a multipart `text` part, and no client calls it.
+  - knews-feed-articles (#13478).
+
+### 2026-11-05 — Boundary 9.8% → 98.5%: every input of every endpoint has a cited limit or a cited "no limit"
+
+Owner: "yes" (go on after authorization; boundary next, the weakest type).
+
+- **All 528 open fields resolved** in `src/api/contract/source/kpost-api.limits.json`, from the kpostV5_Qa source
+  and the QA DB's column types (information_schema, strict mode): **149 limits** and **383 cited `none`**.
+  A limit comes from an enforced annotation, a hand-written check, or the column the value is saved into.
+  `none` means one of: only compared or looked up; a flag or date; replaced or overwritten before saving;
+  never read; or stored in a JSON/longtext column with no per-field width. Each `none` cites the line, and
+  the loader writes nothing into the schema for it.
+  - **How the 528 were checked:** four read-only research passes, one per module group. A merge script then
+    checked every citation (the file exists, the line is in range) and every column limit against the real
+    column type. A random sample of 16 entries was then read by hand in the source.
+- **Corrected older entries:**
+  - forwardKatchupMultipleMsgs ids: maxItems 9 for type 15 (was 5).
+  - userLogin oneSignal_Key: 500 by @Size (the procedure parameter, KP-BE656B; was the 1000 column).
+  - forwardKatchupMessage files: `none`, an optional part (the cited check no longer exists).
+- **Ledger rule made exact:**
+  - A field is resolved by a limit or a cited `none`.
+  - A limited field counts as probed only when the QA guard lets the engine's edge value through. Mobile
+    numbers, e-mails, company names and numeric record ids stay protected; 23 such fields are listed.
+  - An endpoint whose inputs are all `none` has nothing to probe and is not counted (114 are listed).
+  - Four endpoints counted before were never really probed (their only limited input is guarded), so the
+    starting point was 8%, not 9.8%.
+  - Result: **98.5% (65/66)**, 30 walled (19 shared-state writes and 11 guard-only). Left:
+    knews-feed-articles (#13478).
+- **`ENGINE_FOCUS=<type>`** (env.ts, validation-engine.ts): runs only that type's validators and the happy
+  path, to try new limits live without a full engine pass. `runFiling` refuses a focused run outright: it
+  files, reopens and closes nothing. No product command sets it. env is frozen at load, so the refusal is
+  pinned by code review and not by an in-process self-test.
+- **Boundary filler cleanup** now deletes whole rows, instead of leaving them nameless, for the new tables
+  the limits reach: groups with their member rows, filler member rows, KDiary events with their
+  participants, KDiary reports, and audit rows.
+
+### 2026-11-05 — Authorization 60% → 100%: every endpoint that names someone's record gets a stranger test
+
+Owner: "first complete the Authorization test with 100 percentage".
+
+- **The rule, made exact** (test-types-ledger.spec.ts). An input whose key ends in "id" counts as naming a
+  record only when it can name someone's record. `NOT_A_RECORD` lists those that cannot: ids the client makes
+  up for its own request (sessionID, temporaryMsgID, deviceID) and public catalogue ids (country, the booking
+  partner's cities/trips/boarding points/inventory, news categories/languages/feeds). `PUBLIC_FILES` lists
+  4 files any signed-in user may read by design: profile photo, full photo, cover, company logo. No privacy
+  setting covers them, and the source checks no relationship. **Owner confirmed ("yes", 2026-11-05)**; remove an entry once a
+  rule is decided. Both lists are printed in the generated doc. Walled for this type: patchWorkForGroup (a
+  developer-only migration), admin resetPassword (SMS) and voice translate (a paid outside call per request).
+- **New stranger tests**, each with an owner control and judged by read-back, never by status alone:
+  - **Katchup foreign attachment uuid** on sendBulk, forward-selected-attachment, forwardKatchupMessageNew
+    and forwardKatchupMultipleMsgs. The source copies any uuid with no access check, and download access
+    follows the sender of a message that carries the uuid.
+  - **forwardKatchupMultipleMsgs** naming another pair's msgID.
+  - **getKatchupMessagesSubject**, **getDeletedKatchupMsgIds** and **saveKatchupMessages**: another pair's
+    conversation is neither read nor hidden.
+  - **forwardMessageBacktrackByMsgID** answers no ordinary account, not even the sender.
+  - **kallDashboard / kallInfo** never list another pair's call.
+  - **The Home dashboard feeds**, even with the sender's own markers.
+  - **Contacts**: add, nickname, block (one and many), delete and add-many on C's address book leave A's
+    entry unchanged, and A's digital card of B never carries C's nickname.
+  - **Profile by KPost ID and shareUserDetails** follow the owner's privacy rule (applyProfilePrivacy:
+    DOB, present address, alternate mobile, landline) and never return secrets.
+  - **School, university and experience records**, added to the college and activity cases. C now also
+    tries to overwrite each record through the save route.
+  - **The company-logo stranger checks** moved into their own authorization spec, with the admin's set as
+    the owner control. The e2e flow keeps the admin lifecycle. Both use the shared tests/support/company-logo.ts.
+- **First live results** (QA accounts, 2026-11-05). For the next KPost API filing run:
+  - **All four uuid routes leak.** On sendBulkKatchupMsg, sendMessageForForwardSelectedAttachment,
+    forwardKatchupMessageNew and forwardKatchupMultipleMsgs, an outsider who names another pair's attachment
+    uuid can then download the file (reproduced on both attempts).
+  - **shareUserDetails leaks the present address.** It returns the owner's real present address while the
+    profile-by-KPost-ID route hides it. Its date of birth is masked.
+  - **The rest passed:** subjects, deleted ids, save-messages, backtrack (403), Kall history, dashboard,
+    contacts and digital card, the profile records, and the logo strangers (403).
+  - **forward-selected-attachment** answered 500 to both C and B while the test sent a short body; with
+    the web client's full body it answers 200. A 5xx is judged only when the recipient's identical call works.
+  - qatest1's privacyDetails holds `javascript:alert(1)` (a past security probe's value); the backend then
+    hides every private field, the default.
+- **False finding caught before filing:** the college case once reported "C deleted A's record". The
+  trace showed A's profile reads got 401 (A's session had ended), so the read-back was empty. Now a read
+  counts only on a 200: a 401 logs in again once, otherwise the test retries or skips, and A always deletes
+  its own record in `finally`. The record that run left was removed with the orphaned-record tool, and a
+  second listing showed nothing left.
+- **Ad-hoc runs must set `QATEST_ONLY=true`.** `.env` does not set it; only the `product:*` commands do.
+  Without it the personal roles are the `.env` default accounts, not qatest1-6.
+
+### 2026-11-05 — Global writes get bad input from their own flows; negative 99.5%; restore incident fixed
+
+Owner: "yes, continue" (to: cover the shared-state writes with bad input sent by the flow that owns the record).
+
+- **`negativeInFlow`** (src/validation-engine/flow-negative.ts): the flow's real request with one body field broken
+  (removed / null / wrong type / empty), only what the contract rejects, at most 12 cases; uploads get the
+  `request.multipart` cases. It is sent with the flow's own principal, per-call opt-in and owned ids, so every guard
+  stays armed (a case the QA guard refuses is skipped and annotated `negative-not-sent`). A 5xx counts only at 3/3.
+  The `negative-in-flow` annotation lists the cases sent, or says none were. The engine still never sends a global
+  write. Used in: admin member (backup-admin, hold, role, terminate on the throwaway member), company details and
+  bank (company 242), company logo remove/update, change-caption, the throwaway account's access code and
+  password, and **generate-jwt** (signed by the session that owns the refresh token; null and number refused).
+- **First results:** the admin member writes answer **500** to bad input (3/3); the company logo accepts an empty
+  or text file; the access code accepts a number; company details ignore a bad `companyID`. All of them go to the
+  next KPost API filing run.
+- **Incident and fix:** during a slow-QA-server run (login timeouts), the shared BUSINESS_M session was ended
+  mid-flow. The company-details restore got **401**, so company 242 kept the test PAN/GST. The retry then read
+  those values as "the original". Found the same hour from the first attempt's trace and restored live (PAN
+  and GST empty again, name and addresses unchanged, read back). Fix (tests/support/flow-restore.ts):
+  `firstAttemptOriginal` keeps the first attempt's original for every retry, and `restoreStep` logs in again once
+  if a restore is refused with 401 (`TokenProvider.forget`, self-tested). Both are used by company details and the
+  company logo flows.
+- **Ledger:** negative 99.5% (198/199). Left: knews feed articles (no feed until #13478).
+
+### 2026-11-05 — Negative 87% → 98.9%: file uploads fuzzed, global writes stated as walled
+
+Owner: "yes, continue" (the write flows, then multipart).
+
+- **`request.multipart`** (new, negative): on every file-upload endpoint, the real upload with one part broken —
+  no file, a 0-byte file, a text file where an image is required, a broken JSON `text` part — must get a clean 4xx.
+  Lenient like the JSON fuzzers (filed only on a 5xx). After the cases it re-sends the normal upload, so an accepted
+  blank file never stays (a live run left qatest1 a 0-byte cover once; it was removed and the restore added).
+  First run: `uploadProfileAttachments` answers **500** to an empty file and to a text file; the cover, Katchup
+  multipart send and S3 image upload accept empty or wrong files (recorded); every upload ignores a broken JSON part.
+- **Real-record engine runs added:** KDiary event date, reference-messages details, company-logo download.
+  `getReferenceMessagesDetails` with `{}` answers **500**; the company logo downloads with **no login** (200;
+  the API owner's curls say the logo trio needs one; the definitions test agrees): both for the next filing run.
+  `checkOnRealRecord` now records a guard refusal as an annotation instead of failing the flow.
+- **Global writes are walled for the engine, by the standing rule** ("GLOBAL_LIFECYCLE … never the engine",
+  CLAUDE.md §3): 19 shared-state writes (admin member and company changes, logo set/remove, the throwaway's
+  credentials, change-caption, multipart upload, reallocate) are listed with that reason. The admin login is walled
+  too: its probes would send many wrong passwords for the shared business admins (rule 7).
+- **Ledger:** negative 98.9% (180/182), authentication 99.5%, security and performance 99.1%. Left: generate-jwt
+  (needs its own login's access + refresh token pair) and knews feed articles (no feed until #13478).
+
+### 2026-11-05 — QA guard lets provably-malformed ids through; negative 70% → 87%
 
 Owner: "yes" (to: let through values that cannot be anyone's record — a KPost ID without `@`, a non-number where
 a numeric id goes, a malformed uuid — so the negative fuzzers can send them).

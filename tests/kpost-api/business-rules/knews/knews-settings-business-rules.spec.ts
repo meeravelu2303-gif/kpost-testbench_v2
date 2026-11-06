@@ -3,6 +3,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * KNews rules the engine's per-field cases do not reach.
@@ -141,7 +142,14 @@ test.describe(
 
       test('saved news settings read back identically, and an update keeps the creation date @api @verticals', async ({
         endpoints,
+        databases,
       }) => {
+        const db = databases.for('kpost-api');
+        const ownRow = { table: 'TBL_KPOST_KN_SETTINGS', where: { kpost_id: A.username } };
+        // Read before the save, so "modified_date advanced" compares two database times (no clock skew).
+        const modifiedBefore = db.enabled
+          ? (await db.findOne<Record<string, unknown>>(ownRow))?.modified_date
+          : undefined;
         const before = await readSettings(endpoints, 'before');
         const { categories } = await referenceData(endpoints);
         const category = categories.find((c) => c.name)?.name ?? KNEWS_SETTINGS_SAMPLE.category;
@@ -156,6 +164,35 @@ test.describe(
         try {
           const first = await saveSettings(endpoints, wanted, 'first');
           expect(first.status, 'updateKnewsSettings saves A’s own settings').toBe(200);
+          // KnewsServiceImpl.java:64-100 copies every sent field onto the caller's row (kpost_id from
+          // the token) and refreshes modified_date (:98) before save.
+          const timeOf = (v: unknown) => (v instanceof Date ? v.getTime() : Date.parse(String(v)));
+          await expectStored(
+            db,
+            'knews-update-settings',
+            {
+              ...ownRow,
+              columns: {
+                country_name: wanted.countryName,
+                state_name: wanted.stateName,
+                city_names: wanted.cityNames,
+                language_id: wanted.languageId,
+                news_type: wanted.newsType,
+                news_source: wanted.newsSource,
+                publications: wanted.publications,
+                category: wanted.category,
+                sub_categories: wanted.subCategories,
+                retention_days: wanted.retentionDays,
+                archive_days: wanted.archiveDays,
+                subscription_details: wanted.subscriptionDetails,
+                modified_date: (v: unknown) =>
+                  Number.isFinite(timeOf(v)) &&
+                  (modifiedBefore == null || timeOf(v) > timeOf(modifiedBefore)),
+              },
+              rule: 'updateKnewsSettings stores every sent field on the caller’s settings row and advances modified_date',
+            },
+            endpoints,
+          );
           const read1 = await readSettings(endpoints, 'after-first');
           expect(read1.status, 'getKnewsSettings reads them back').toBe(200);
           const differing = SETTING_KEYS.filter(

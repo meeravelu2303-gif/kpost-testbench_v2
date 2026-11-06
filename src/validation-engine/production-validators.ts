@@ -61,6 +61,8 @@ export const PRODUCTION_BLOCKED_VALIDATORS: Readonly<Record<string, string>> = {
   'request.malformed-json': 'sends broken JSON bodies',
   'request.method-not-allowed': 'sends a verb the endpoint does not implement',
   'request.unsupported-media-type': 'sends the body under the wrong content type',
+  'request.multipart':
+    'uploads broken files (a write; runs only with WRITE_FUZZ + TEST_DB_MODE, the product run)',
   'security.injection': 'sends SQL/NoSQL payloads that a write endpoint would store',
   'security.xss': 'sends a script tag that a write endpoint would store',
   'security.information-disclosure': 'probes neighbouring identifiers belonging to other tenants',

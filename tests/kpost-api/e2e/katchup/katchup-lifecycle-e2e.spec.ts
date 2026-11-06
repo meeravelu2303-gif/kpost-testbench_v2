@@ -2,10 +2,11 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { KATCHUP_MESSAGE_TYPE, KATCHUP_STATUS } from '@api/contract/kpost-types';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
-import { KpostRepository } from '@database/repositories/kpost.repository';
+import { text } from '@database/kpost-assertions';
 import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * Katchup feature flow: message types, recall, group read receipts, Confidential Copy secrecy and
@@ -25,6 +26,18 @@ const A = principal('personal'); // sender          Qatesting@
 const B = principal('victim'); // TO recipient      Qatesting2@
 const C = principal('personal-3'); // visible Copy   Qatesting3@
 const D = principal('personal-4'); // confidential   Qatesting4@
+
+/** A KPOST ID column holding `id`, compared without case (the token's copy is the DB's spelling). */
+const isId =
+  (id: string) =>
+  (value: unknown): boolean =>
+    text(value)?.toLowerCase() === id.toLowerCase();
+
+/** A flag column left off (0, false or never set). */
+const notSet = (value: unknown): boolean =>
+  value === null || value === undefined || value === false || text(value) === '0';
+
+const MESSAGES = 'TBL_KPOST_KATCHUP_MESSAGES';
 
 interface Sent {
   status: number;
@@ -107,18 +120,12 @@ async function cleanup(endpoints: EndpointExecutor, as: Principal, msgID?: numbe
     .catch(() => undefined);
 }
 
-/**
- * Forward `source` (the row a send returned) to `to` with the web app's body (ForwardFooter.js):
- * the source travels as a JSON string in `referenceMessage`, its sender and receiver blanked when
- * the forward hides them (16, 21). Returns the forward's status, its new msgIDs and the row.
- */
-async function forward(
-  endpoints: EndpointExecutor,
-  as: Principal,
+/** The web app's forward body (ForwardFooter.js) for a source row, and the reference it carries. */
+function forwardBody(
   source: Record<string, unknown>,
   type: number,
   to: string[],
-): Promise<{ status: number; msgIDs: number[]; row?: Record<string, unknown> }> {
+): { body: Record<string, unknown>; reference: string } {
   const hidden = type === 16 || type === 21;
   const reference = JSON.stringify({
     receiver: hidden ? '' : source.receiver,
@@ -137,29 +144,46 @@ async function forward(
     sharedMessageDetails: source.sharedMessageDetails,
     isVoiceMessage: source.isVoiceMessage,
   });
+  return {
+    reference,
+    body: {
+      receiver: '',
+      messageType: type,
+      subject: source.subject,
+      actualMessage: JSON.stringify([{ insert: 'QA bench forward\n' }]),
+      attachmentCaption: '[]',
+      status: '0',
+      sessionID: 'Web-Reactjs',
+      referenceMessage: reference,
+      groupFlag: false,
+      forwardReceiverList: to,
+      groupForwardList: [],
+      groupmemberList: [],
+      sharedMessageDetails: null,
+      sharedType: type,
+      temporaryMsgID: 8989,
+      uuid: [],
+      referenceMessageIDList: null,
+    },
+  };
+}
+
+/**
+ * Forward `source` (the row a send returned) to `to` with the web app's body (ForwardFooter.js):
+ * the source travels as a JSON string in `referenceMessage`, its sender and receiver blanked when
+ * the forward hides them (16, 21). Returns the forward's status, its new msgIDs and the row.
+ */
+async function forward(
+  endpoints: EndpointExecutor,
+  as: Principal,
+  source: Record<string, unknown>,
+  type: number,
+  to: string[],
+): Promise<{ status: number; msgIDs: number[]; row?: Record<string, unknown> }> {
+  const { body, reference } = forwardBody(source, type, to);
   const exchange = await endpoints.sendTo(
     'katchup-forward-message-new',
-    {
-      body: {
-        receiver: '',
-        messageType: type,
-        subject: source.subject,
-        actualMessage: JSON.stringify([{ insert: 'QA bench forward\n' }]),
-        attachmentCaption: '[]',
-        status: '0',
-        sessionID: 'Web-Reactjs',
-        referenceMessage: reference,
-        groupFlag: false,
-        forwardReceiverList: to,
-        groupForwardList: [],
-        groupmemberList: [],
-        sharedMessageDetails: null,
-        sharedType: type,
-        temporaryMsgID: 8989,
-        uuid: [],
-        referenceMessageIDList: null,
-      },
-    },
+    { body },
     {
       label: `feature:forward:${type}`,
       auth: { principal: as },
@@ -326,7 +350,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
         { type: 'requirement', description: 'FR-KU-028' },
       ],
     },
-    async ({ endpoints }) => {
+    async ({ endpoints, validationEngine }) => {
       const marker = `QA recall ${Date.now()}`;
       const sent = await send(endpoints, A, { receiver: B.username, actualMessage: marker });
       expect(sent.msgID, 'message created').toBeTruthy();
@@ -344,8 +368,22 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       expect
         .soft(view.text, 'a recalled message must not remain in the recipient view (BR-K03)')
         .not.toContain(marker);
-
       await cleanup(endpoints, A, sent.msgID);
+
+      // The full engine on a fresh real message of A's (the sweep's msgID names none, so its probes
+      // stop before any field rule); that message is recalled by the engine's own normal request.
+      const fresh = await send(endpoints, A, {
+        receiver: B.username,
+        actualMessage: `QA recall engine ${Date.now()}`,
+      });
+      if (fresh.msgID)
+        await checkOnRealRecord(
+          validationEngine,
+          'katchup-recall-message',
+          { body: { msgID: fresh.msgID, groupFlag: false } },
+          [fresh.msgID],
+        );
+      await cleanup(endpoints, A, fresh.msgID);
     },
   );
 
@@ -572,6 +610,8 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
 
   test('forward carries a message to another recipient (FR-K15) @api @katchup', async ({
     endpoints,
+    databases,
+    validationEngine,
   }) => {
     const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to forward' });
     expect(seed.msgID, 'seed created').toBeTruthy();
@@ -587,6 +627,35 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       created.push(...fwd.msgIDs);
       expect.soft(fwd.status, 'the web app’s forward is accepted').toBe(200);
       expect.soft(fwd.row?.receiver, 'the forward goes to the person picked').toBe(C.username);
+      if (fwd.status === 200 && fwd.msgIDs[0]) {
+        // The same body forward() sent (it is built from the source row, so it is identical).
+        const sentForward = forwardBody(
+          firstRow(seed.body)!,
+          KATCHUP_MESSAGE_TYPE.forwardMessageReveal!,
+          [C.username],
+        );
+        // KatchupServiceImpl.java:1839 copies the body (convertKatchupObj), :1983 sets each receiver,
+        // :2000 saves one row per forwardReceiverList entry.
+        const db = databases.for('kpost-api');
+        await expectStored(
+          db,
+          'katchup-forward-message-new',
+          {
+            table: MESSAGES,
+            where: { msg_id: fwd.msgIDs[0] },
+            columns: {
+              sender: isId(A.username),
+              receiver: isId(C.username),
+              message_type: KATCHUP_MESSAGE_TYPE.forwardMessageReveal,
+              subject: sentForward.body.subject,
+              actual_message: sentForward.body.actualMessage,
+              reference_message: sentForward.reference,
+            },
+            rule: 'forwardKatchupMessageNew stores a row from the caller to each picked recipient, with the forward type, Subject, body and source reference it was sent',
+          },
+          endpoints,
+        );
+      }
       const seen = await conversation(endpoints, C, A.username);
       expect
         .soft(seen.text, 'the recipient finds the forward in their conversation with the sender')
@@ -615,6 +684,17 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       expect
         .soft(incomplete.status, 'an incomplete forward is refused without crashing (no 5xx)')
         .toBeLessThan(500);
+
+      // The full engine on the web app's forward of this real message (the sweep has no source).
+      const real = forwardBody(firstRow(seed.body)!, KATCHUP_MESSAGE_TYPE.forwardMessageReveal!, [
+        C.username,
+      ]);
+      await checkOnRealRecord(
+        validationEngine,
+        'katchup-forward-message-new',
+        { body: real.body },
+        [real.reference, seed.msgID!],
+      );
     } finally {
       for (const msgID of created) await cleanup(endpoints, A, msgID);
       await cleanup(endpoints, A, seed.msgID);
@@ -703,16 +783,32 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
           .soft(saved.status, `save accepted (body: ${saved.bodyText?.slice(0, 200)})`)
           .toBe(200);
 
-        const database = databases.for('kpost-api');
-        if (database.enabled && keep.msgID && drop.msgID) {
-          const repo = new KpostRepository(database);
-          const on = (value: unknown) => value === 1 || value === true || String(value) === '1';
-          const kept = await repo.katchupMessage(keep.msgID);
-          const dropped = await repo.katchupMessage(drop.msgID);
-          expect.soft(on(kept?.deleted_by_sender), 'the selected message stays').toBe(false);
-          expect
-            .soft(on(dropped?.deleted_by_sender), 'the other message leaves the saver’s view')
-            .toBe(true);
+        const db = databases.for('kpost-api');
+        if (saved.status === 200 && keep.msgID && drop.msgID) {
+          // KatchupDaoImpl.java:490-492 sets deleted_by_sender on the saver's messages to the peer
+          // whose msg_id is NOT in msgIDs; the selected one is left as it was.
+          await expectStored(
+            db,
+            'katchup-save-messages',
+            {
+              table: MESSAGES,
+              where: { msg_id: drop.msgID },
+              columns: { deleted_by_sender: true },
+              rule: 'saveKatchupMessages hides every other message of the conversation from the saver (deleted_by_sender set)',
+            },
+            endpoints,
+          );
+          await expectStored(
+            db,
+            'katchup-save-messages',
+            {
+              table: MESSAGES,
+              where: { msg_id: keep.msgID },
+              columns: { deleted_by_sender: notSet },
+              rule: 'saveKatchupMessages keeps the selected message in the saver’s view (deleted_by_sender stays off)',
+            },
+            endpoints,
+          );
         }
       } finally {
         await cleanup(endpoints, saver, keep.msgID);
@@ -724,7 +820,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
   test(
     'mark-important flags a message (FR-K18) @api @katchup @database',
     { annotation: [{ type: 'requirement-partial', description: 'FR-KU-040' }] },
-    async ({ endpoints, databases }) => {
+    async ({ endpoints, databases, validationEngine }) => {
       const seed = await send(endpoints, A, { receiver: B.username, actualMessage: 'QA to star' });
       expect(seed.msgID, 'seed created').toBeTruthy();
 
@@ -736,24 +832,30 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       );
       expect.soft(marked.status, 'mark-important accepted').toBe(200);
 
-      // The response answers success regardless, so the DB row is the judge.
-      const database = databases.for('kpost-api');
-      if (database.enabled && seed.msgID) {
-        const row = await new KpostRepository(database).katchupMessage(seed.msgID);
-        const marked_ =
-          row?.marked_by_sender === 1 ||
-          row?.marked_by_receiver === 1 ||
-          row?.marked_by_sender === true ||
-          row?.marked_by_receiver === true;
-        expect
-          .soft(
-            marked_,
-            `mark-important reported success but neither marked_by_sender nor marked_by_receiver ` +
-              `moved (sender=${String(row?.marked_by_sender)}, receiver=${String(row?.marked_by_receiver)})`,
-          )
-          .toBe(true);
-      }
+      // A success is judged by the row: the caller is the sender of this fresh (unstarred) message.
+      const db = databases.for('kpost-api');
+      if (marked.status === 200 && seed.msgID)
+        // KatchupDaoImpl.java:228-230 picks the sender branch; :244 flips marked_by_sender.
+        await expectStored(
+          db,
+          'katchup-mark-important',
+          {
+            table: MESSAGES,
+            where: { msg_id: seed.msgID },
+            columns: { marked_by_sender: true },
+            rule: "markOrUnmarkImportant sets marked_by_sender on the caller's own unstarred message",
+          },
+          endpoints,
+        );
 
+      // The full engine on this real message (the sweep's msgID names none).
+      if (seed.msgID)
+        await checkOnRealRecord(
+          validationEngine,
+          'katchup-mark-important',
+          { body: { msgID: seed.msgID } },
+          [seed.msgID],
+        );
       await cleanup(endpoints, A, seed.msgID);
     },
   );
@@ -761,7 +863,7 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
   test(
     'a recipient can report a received message (FR-K24) @api @katchup',
     { annotation: [{ type: 'requirement-partial', description: 'FR-KU-047' }] },
-    async ({ endpoints }) => {
+    async ({ endpoints, databases }) => {
       const seed = await send(endpoints, A, {
         receiver: B.username,
         actualMessage: 'QA to report',
@@ -782,6 +884,34 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
         { label: 'feature:report', auth: { principal: B }, allowLiveWrite: true },
       );
       expect.soft(report.status, 'report accepted').toBeLessThan(300);
+
+      if (report.status < 300 && seed.msgID) {
+        const db = databases.for('kpost-api');
+        // KatchupDaoImpl.java:858-864 persists one TBL_KPOST_REPORT_DETAILS row: kpost_id from the
+        // token, the msgID, reason and reportingKpostID as sent, the reasons picked as a JSON list.
+        await expectStored(
+          db,
+          'katchup-report-abuse',
+          {
+            table: 'TBL_KPOST_REPORT_DETAILS',
+            where: { msg_id: seed.msgID, kpost_id: B.username },
+            columns: {
+              reporting_kpost_id: isId(B.username),
+              reason: 'QA bench test report',
+              report_id: (value: unknown) => {
+                try {
+                  const picked = JSON.parse(text(value) ?? '[]') as unknown[];
+                  return Array.isArray(picked) && picked.some((id) => String(id) === '1');
+                } catch {
+                  return false;
+                }
+              },
+            },
+            rule: "reportAbuse records the reporter's report of that message with the reason and the reasons picked",
+          },
+          endpoints,
+        );
+      }
 
       await cleanup(endpoints, A, seed.msgID);
     },
@@ -844,6 +974,8 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
 
   test('send variants (multipart, bulk) and forward variants, all self-cleaning @api @katchup', async ({
     endpoints,
+    databases,
+    validationEngine,
   }) => {
     const created: number[] = [];
     const drive = async (
@@ -869,14 +1001,79 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
       if (seed.msgID) created.push(seed.msgID);
 
       // Send variants — each uses the endpoint's own request factory (multipart / bulk shapes).
+      const variant: Record<string, { status: number; msgID?: number }> = {};
       for (const [id, label] of [
         ['katchup-send-multipart', 'send-multipart'],
         ['katchup-send-bulk', 'send-bulk'],
         ['katchup-send-bulk-multipart', 'send-bulk-multipart'],
       ] as Array<[string, string]>) {
-        const { status } = await drive(id, {}, label);
-        expect.soft(status, `${label} returns a status`).toBeLessThan(600);
+        const result = await drive(id, {}, label);
+        variant[id] = result;
+        expect.soft(result.status, `${label} returns a status`).toBeLessThan(600);
       }
+
+      // What each variant stored, against what its definition's request sent (send.api.ts). Their
+      // multipart file goes in a part named `file`, not the `files` the controller reads, so no
+      // attachment is expected: the text part alone is sent.
+      const db = databases.for('kpost-api');
+      const plain = sendShape();
+      const multipart = variant['katchup-send-multipart'];
+      if (multipart && multipart.status < 300 && multipart.msgID)
+        // KatchupControllerV2.java:964-965 sends the text part through sendMessage, whose 1:1 branch
+        // saves it at KatchupServiceImpl.java:798.
+        await expectStored(
+          db,
+          'katchup-send-multipart',
+          {
+            table: MESSAGES,
+            where: { msg_id: multipart.msgID },
+            columns: {
+              sender: isId(A.username),
+              receiver: isId(B.username),
+              message_type: plain.messageType,
+              subject: plain.subject,
+              actual_message: plain.actualMessage,
+            },
+            rule: 'sendKatchupMsgMultiPart stores the message in its text part, from the caller to the receiver named',
+          },
+          endpoints,
+        );
+      const bulkSent = {
+        sender: isId(A.username),
+        receiver: isId(B.username),
+        message_type: KATCHUP_MESSAGE_TYPE.bulkMessage,
+        subject: 'QA Bench',
+        actual_message: 'QA bench bulk message.',
+      };
+      const bulk = variant['katchup-send-bulk'];
+      if (bulk && bulk.status < 300 && bulk.msgID)
+        // KatchupServiceImpl.java:1630 copies the body, :1706 sets each receiver, :1715 saves one row each.
+        await expectStored(
+          db,
+          'katchup-send-bulk',
+          {
+            table: MESSAGES,
+            where: { msg_id: bulk.msgID },
+            columns: bulkSent,
+            rule: 'sendBulkKatchupMsg stores one row per receiver with the type, Subject and body sent',
+          },
+          endpoints,
+        );
+      const bulkMultipart = variant['katchup-send-bulk-multipart'];
+      if (bulkMultipart && bulkMultipart.status < 300 && bulkMultipart.msgID)
+        // KatchupControllerV2.java:1248-1249 sends the text part through sendBulkMessage
+        // (KatchupServiceImpl.java:1715 saves it).
+        await expectStored(
+          db,
+          'katchup-send-bulk-multipart',
+          {
+            table: MESSAGES,
+            where: { msg_id: bulkMultipart.msgID },
+            columns: bulkSent,
+            rule: 'sendBulkKatchupMsgMultiPart stores the bulk message in its text part, one row per receiver',
+          },
+          endpoints,
+        );
 
       // Forward variants — reference the seed message / our own second account.
       const forwarded = seed.msgID
@@ -905,6 +1102,27 @@ test.describe('KPost Katchup · feature flow', { tag: ['@api', '@katchup', '@reg
         const result = await drive(id, bodyObj, label);
         expect.soft(result.status, `${label} returns a status`).toBeLessThan(600);
       }
+
+      // The full engine on the web app's multi-forward of this real message (ForwardFooter.js:
+      // 1426-1436; the sweep's body names no source message, so it is refused before any limit).
+      if (seed.msgID)
+        await checkOnRealRecord(
+          validationEngine,
+          'katchup-forward-multiple',
+          {
+            body: {
+              forwardReceiverList: [B.username],
+              groupForwardList: [],
+              forwardMessageIDList: [seed.msgID],
+              attachmentCaption: '[]',
+              uuid: [],
+              messageType: KATCHUP_MESSAGE_TYPE.forwardMessageReveal,
+              sessionID: 'Web-Reactjs',
+              actualMessage: 'QA bench forward multiple',
+            },
+          },
+          [seed.msgID],
+        );
 
       // Backtrack is fed the forwarded message's own msgID (not the seed); a read, so allowLiveRead.
       if (forwardedMsgID) {

@@ -30,6 +30,15 @@ export class TokenProvider {
   /**
    * A token for `principal` from `profile`'s login endpoint; the profile is part of the cache key.
    */
+  /**
+   * Drops this worker's cached token for `principal`, so the next call logs in again: for a step that
+   * must not be lost to a session KPost ended (a shared business account another person signed in to).
+   */
+  forget(principal: Principal): void {
+    for (const key of cache.keys())
+      if (key.startsWith(`${this.scope}|`) && key.endsWith(`|${principal.key}`)) cache.delete(key);
+  }
+
   async tokenFor(principal: Principal, profile: AuthProfile): Promise<string> {
     const existing = this.existingSession?.(principal);
     if (existing) return existing;

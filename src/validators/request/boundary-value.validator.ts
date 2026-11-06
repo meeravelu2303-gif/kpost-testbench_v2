@@ -1,5 +1,5 @@
 import type { JsonSchema } from '@api/schema/contract-schema';
-import { createRequestValidator, type Candidate } from './request-mutation';
+import { createRequestValidator, type Candidate, type MutationStrategy } from './request-mutation';
 
 const num = (value: unknown): number | undefined => (typeof value === 'number' ? value : undefined);
 
@@ -51,48 +51,51 @@ export function itemsOf(count: number, current: unknown): unknown[] | undefined 
   return Array.from({ length: Math.max(0, count) }, () => sample);
 }
 
+/** The values just outside each limit (also sent by `boundaryInFlow` for shared-state writes). */
+export const boundaryValueStrategy: MutationStrategy = (field, current) => {
+  const s = field.schema;
+  const limits = fieldLimits(s);
+  // The whole body is mutated only as a list (an Admin save takes a JSON array).
+  if (field.isRoot && s.type !== 'array') return [];
+  const candidates: Candidate[] = [];
+  const { minLength, maxLength, minimum, maximum, exclusiveMinimum, exclusiveMaximum } = limits;
+  const { minItems, maxItems } = limits;
+
+  if (minLength !== undefined && minLength > 0) {
+    candidates.push({
+      label: `length ${minLength - 1} (minLength ${minLength})`,
+      value: filler(minLength - 1, current),
+    });
+  }
+  if (maxLength !== undefined) {
+    candidates.push({
+      label: `length ${maxLength + 1} (maxLength ${maxLength})`,
+      value: filler(maxLength + 1, current),
+    });
+  }
+  // Below an id's minimum (0, -1) names nothing; above its maximum could name a real record.
+  if (minimum !== undefined)
+    candidates.push({ label: `${minimum - 1} (minimum ${minimum})`, value: minimum - 1 });
+  if (maximum !== undefined && !isIdentifierField(field.path))
+    candidates.push({ label: `${maximum + 1} (maximum ${maximum})`, value: maximum + 1 });
+  if (exclusiveMinimum !== undefined)
+    candidates.push({ label: `${exclusiveMinimum} (exclusiveMinimum)`, value: exclusiveMinimum });
+  if (exclusiveMaximum !== undefined)
+    candidates.push({ label: `${exclusiveMaximum} (exclusiveMaximum)`, value: exclusiveMaximum });
+  const tooFew =
+    minItems !== undefined && minItems > 0 ? itemsOf(minItems - 1, current) : undefined;
+  if (tooFew)
+    candidates.push({ label: `${minItems! - 1} items (minItems ${minItems})`, value: tooFew });
+  const tooMany = maxItems !== undefined ? itemsOf(maxItems + 1, current) : undefined;
+  if (tooMany)
+    candidates.push({ label: `${maxItems! + 1} items (maxItems ${maxItems})`, value: tooMany });
+  return candidates;
+};
+
 export const boundaryValueValidator = createRequestValidator({
   name: 'request.boundary-value',
   description: 'Values just outside min/max length, value and item limits are rejected',
   sections: ['body', 'query', 'path'],
   withItems: true,
-  strategy: (field, current) => {
-    const s = field.schema;
-    const limits = fieldLimits(s);
-    // The whole body is mutated only as a list (an Admin save takes a JSON array).
-    if (field.isRoot && s.type !== 'array') return [];
-    const candidates: Candidate[] = [];
-    const { minLength, maxLength, minimum, maximum, exclusiveMinimum, exclusiveMaximum } = limits;
-    const { minItems, maxItems } = limits;
-
-    if (minLength !== undefined && minLength > 0) {
-      candidates.push({
-        label: `length ${minLength - 1} (minLength ${minLength})`,
-        value: filler(minLength - 1, current),
-      });
-    }
-    if (maxLength !== undefined) {
-      candidates.push({
-        label: `length ${maxLength + 1} (maxLength ${maxLength})`,
-        value: filler(maxLength + 1, current),
-      });
-    }
-    // Below an id's minimum (0, -1) names nothing; above its maximum could name a real record.
-    if (minimum !== undefined)
-      candidates.push({ label: `${minimum - 1} (minimum ${minimum})`, value: minimum - 1 });
-    if (maximum !== undefined && !isIdentifierField(field.path))
-      candidates.push({ label: `${maximum + 1} (maximum ${maximum})`, value: maximum + 1 });
-    if (exclusiveMinimum !== undefined)
-      candidates.push({ label: `${exclusiveMinimum} (exclusiveMinimum)`, value: exclusiveMinimum });
-    if (exclusiveMaximum !== undefined)
-      candidates.push({ label: `${exclusiveMaximum} (exclusiveMaximum)`, value: exclusiveMaximum });
-    const tooFew =
-      minItems !== undefined && minItems > 0 ? itemsOf(minItems - 1, current) : undefined;
-    if (tooFew)
-      candidates.push({ label: `${minItems! - 1} items (minItems ${minItems})`, value: tooFew });
-    const tooMany = maxItems !== undefined ? itemsOf(maxItems + 1, current) : undefined;
-    if (tooMany)
-      candidates.push({ label: `${maxItems! + 1} items (maxItems ${maxItems})`, value: tooMany });
-    return candidates;
-  },
+  strategy: boundaryValueStrategy,
 });

@@ -7193,7 +7193,7 @@
         }
       ],
       "confidence": "high",
-      "liveCheck": "not-run: the trial got only a FAILURE answer (HTTP 401); needs a success to compare",
+      "liveCheck": "not-run: live 2026-11-05 (positive/katchup, QATEST_ONLY) answers 500 with a valid token (the earlier 401 was a token blip); a server defect, not adopted until it succeeds",
       "evidence": [
         "KatchupControllerV2.java:2180-2193 (urlPath is \"getAllReportMsg\", copied from the other endpoint)",
         "KatchupDaoImpl.java:990-993 JPQL select rm from ReportReason rm (no WHERE, no ORDER BY)",

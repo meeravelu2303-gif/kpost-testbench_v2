@@ -46,7 +46,8 @@ export const updateKallStatusApi = defineKallEndpoint({
   method: 'POST',
   path: '/v2/kall/updateKallStatus',
   summary: 'Move a call to a new status (connected, declined, cancelled…)',
-  tags: [...DIRECT_TAGS, 'status'],
+  // kallID 0 names no call (404 before any field rule, live 2026-11-05): the lifecycle runs it on one.
+  tags: [...DIRECT_TAGS, 'status', 'needs-kall-id'],
   destructive: true,
   request: body(() => ({ id: 0, kallStatus: KALL_STATUS.cancelled, kallID: 0 })),
   note: 'needs a real kallID from initiateKall; exercised by the lifecycle flow',
@@ -58,7 +59,7 @@ export const updateSenderAndReceiverKallStatusApi = defineKallEndpoint({
   method: 'POST',
   path: '/v2/kall/updateSenderAndReceiverKallStatus',
   summary: 'Set a call status for both sender and receiver',
-  tags: [...DIRECT_TAGS, 'status'],
+  tags: [...DIRECT_TAGS, 'status', 'needs-kall-id'],
   destructive: true,
   request: body(() => ({
     sender: testData.kpostId,

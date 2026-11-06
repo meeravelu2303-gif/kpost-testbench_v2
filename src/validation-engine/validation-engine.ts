@@ -10,6 +10,7 @@ import type { DatabaseValidationRegistry } from '@database/database-validation';
 import type { DatabasePool } from '@database/database-pool';
 import type { Logger } from '@utils/logger';
 import { maskSecretsInString, maskSecretsOnly } from '@utils/masking';
+import { checkTypeOf } from './check-types';
 import { EndpointExecutor } from './endpoint-executor';
 import { confirmFailure } from './reproduction-gate';
 import {
@@ -75,6 +76,16 @@ export class ValidationEngine {
         .filter((validator) => validator.profiles.includes(profile))
         // Concurrency probes fire simultaneous bursts; skip them on a server shared with live (env flag).
         .filter((validator) => env.CONCURRENCY_PROBES || validator.category !== 'CONCURRENCY')
+        // ENGINE_FOCUS: that type's validators and the happy path (a focused, never-filed run).
+        .filter((validator) => {
+          if (!env.ENGINE_FOCUS) return true;
+          try {
+            const type = checkTypeOf(validator.name);
+            return type === env.ENGINE_FOCUS || type === 'positive';
+          } catch {
+            return false;
+          }
+        })
         .sort((a, b) => STAGE_ORDER[a.stage] - STAGE_ORDER[b.stage])
     );
   }

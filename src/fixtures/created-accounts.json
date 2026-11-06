@@ -13,8 +13,8 @@
       "kpostId": "qabenchsignup@kpostindia.com",
       "mobileNumber": "9000000777",
       "source": "signup-login-signup",
-      "note": "otp-signup-lifecycle.spec.ts: personal registration",
-      "createdAt": "2026-11-03T16:19:09.080Z"
+      "note": "signup-login-signup-e2e.spec.ts: personal registration",
+      "createdAt": "2026-11-05T18:21:26.877Z"
     },
     {
       "kpostId": "qabenchweb@kpostindia.com",

@@ -35,6 +35,7 @@ import {
   unsupportedMediaTypeValidator,
 } from './request/error-shape.validator';
 import { malformedJsonValidator } from './request/malformed-json.validator';
+import { multipartValidator } from './request/multipart.validator';
 import { nullValueValidator } from './request/null-value.validator';
 import { requiredFieldsValidator } from './request/required-fields.validator';
 import { unknownFieldsValidator } from './request/unknown-fields.validator';
@@ -102,6 +103,7 @@ export const validationRegistry = new ValidationRegistry().register(
   methodNotAllowedValidator,
   unsupportedMediaTypeValidator,
   emptyBodyValidator,
+  multipartValidator,
   // Security
   securityHeadersValidator,
   jwtValidator,

@@ -3,6 +3,7 @@
 
 import { AUTH_PROFILES } from '@config/auth-profile';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
+import { checkOnRealRecord } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 const K = AUTH_PROFILES.kpost;
@@ -151,7 +152,7 @@ test.describe(
         tag: ['@bug-954', '@bug-958'],
         annotation: [{ type: 'non-functional', description: 'security' }],
       },
-      async ({ endpoints }) => {
+      async ({ endpoints, validationEngine }) => {
         const marker = `QA regression-954-958 ${Date.now()}`;
         const sent = await endpoints.sendTo(
           'katchup-send-message',
@@ -199,6 +200,12 @@ test.describe(
             { body: { referenceMessageIDList: [msgID] } },
             { label: 'regression958:attack', auth: { principal: C! }, allowLiveRead: true },
           );
+          await checkOnRealRecord(
+            validationEngine,
+            'katchup-reference-messages-details',
+            { body: { referenceMessageIDList: [msgID] } },
+            [],
+          );
           const leaked958 = attack958.status < 300 && attack958.bodyText.includes(marker);
           if (leaked958) {
             endpoints.recordBusinessRuleViolation({
@@ -235,7 +242,7 @@ test.describe(
     test(
       '#957: getMessagesByReferenceMessageList must not reveal content to an unrelated account @api @security',
       { tag: ['@bug-957'], annotation: [{ type: 'non-functional', description: 'security' }] },
-      async ({ endpoints }) => {
+      async ({ endpoints, validationEngine }) => {
         const marker = `QA regression-957 ${Date.now()}`;
         const sent = await endpoints.sendTo(
           'katchup-send-message',
@@ -277,6 +284,25 @@ test.describe(
               `#957: getMessagesByReferenceMessageList must not leak content to an unrelated account (replied ${attack.status})`,
             )
             .toBe(false);
+
+          // The full engine on this real reference list, as its sender (the sweep has none to send).
+          const ownSpec = {
+            body: { referenceMessageList: JSON.stringify([{ ids: [msgID] }]), messageType: 20 },
+          };
+          const own = await endpoints.sendTo('katchup-messages-by-reference', ownSpec, {
+            label: 'regression957:owner',
+            auth: { principal: A! },
+            allowLiveRead: true,
+          });
+          if (own.status < 300 && own.bodyText.includes(marker))
+            await checkOnRealRecord(validationEngine, 'katchup-messages-by-reference', ownSpec, [
+              msgID!,
+            ]);
+          else
+            test.info().annotations.push({
+              type: 'not-judged',
+              description: `katchup-messages-by-reference: the sender's own call answered HTTP ${own.status} without the message, so the engine was not run on it`,
+            });
         } finally {
           await endpoints
             .sendTo(

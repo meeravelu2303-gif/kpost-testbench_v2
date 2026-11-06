@@ -123,6 +123,25 @@ const EnvSchema = z.object({
    */
   SOURCE_CONTRACT_TRIAL: z.stringbool().default(false),
   /**
+   * A focused engine run: only this check type's validators (plus the happy-path check they need),
+   * e.g. `boundary` to try new limits live without a full engine pass. Such a run files, reopens and
+   * closes nothing (`runFiling` refuses it); a product command never sets it.
+   */
+  ENGINE_FOCUS: z
+    .enum([
+      'contract',
+      'positive',
+      'negative',
+      'boundary',
+      'authentication',
+      'authorization',
+      'security',
+      'performance',
+      'data-integrity',
+      'business-rules',
+    ])
+    .optional(),
+  /**
    * Largest file the bench may upload: uploads land in the live AWS S3 bucket (owner, 2026-10-31).
    * 64 KB covers the signature image's 10-50 KB rule; see src/validation-engine/upload-guard.ts.
    */

@@ -2,8 +2,10 @@ import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import { KATCHUP_MESSAGE_TYPE } from '@api/contract/kpost-types';
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
+import { text } from '@database/kpost-assertions';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * Katchup rules checked by their end result in each party's thread, not just "request accepted":
@@ -213,7 +215,7 @@ test.describe(
     test(
       'a hidden-source forward never shows the recipient who originally wrote the message',
       { annotation: [{ type: 'requirement', description: 'BR-KU-FORWARD-HIDE' }] },
-      async ({ endpoints }) => {
+      async ({ endpoints, databases }) => {
         const subject = `QA hidden-source ${Date.now()}`;
         let source: number | undefined;
         let forwarded: Row | undefined;
@@ -259,6 +261,29 @@ test.describe(
           expect(forwarded?.sender?.toLowerCase(), 'C sees it as from B, the forwarder').toBe(
             B.username.toLowerCase(),
           );
+          if (forwarded?.msgID) {
+            const db = databases.for('kpost-api');
+            const isId = (id: string) => (value: unknown) =>
+              text(value)?.toLowerCase() === id.toLowerCase();
+            // KatchupServiceImpl.java:2684-2688 builds the type-16 forward from the caller with Subject
+            // "General"; forwardKatchupMessage saves one row per receiver (:1983, :2000).
+            await expectStored(
+              db,
+              'katchup-forward-multiple',
+              {
+                table: 'TBL_KPOST_KATCHUP_MESSAGES',
+                where: { msg_id: forwarded.msgID },
+                columns: {
+                  sender: isId(B.username),
+                  receiver: isId(C.username),
+                  message_type: HIDDEN_FORWARD,
+                  subject: 'General',
+                },
+                rule: 'forwardKatchupMultipleMsgs stores a Hide Source forward as a type-16 row from the forwarder to the picked recipient',
+              },
+              endpoints,
+            );
+          }
           const everything = JSON.stringify(forwarded).toLowerCase();
           expect(everything, "nowhere in C's copy is A's KPOST ID").not.toContain(
             A.username.toLowerCase(),

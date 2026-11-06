@@ -6,6 +6,7 @@ import { testData } from '@config/test-data.config';
 import { scheduleShape } from '@api/definitions/kpost/kdiary/write.api';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
 import { expect, test } from '@fixtures';
+import { expectStored, filled } from '../../../support/db-stored';
 
 /**
  * The KDiary writes that name a record by id, beyond getEventDate/updateEvent
@@ -79,7 +80,9 @@ test.describe(
 
     test("an unrelated principal cannot edit, add participants to, or set remarks on another user's event @api @kpost-api @security", async ({
       endpoints,
+      databases,
     }) => {
+      const db = databases.for('kpost-api');
       const stamp = Date.now();
       const start = future(7, 10);
       const end = future(7, 11);
@@ -129,6 +132,24 @@ test.describe(
           { body: shape({ eventID, title: ownerTitle }) },
           { label: 'kdiary-xu:edit-owner-control', ...asA },
         );
+        if (ownerEdit.status < 300)
+          // KdiaryScheduleServiceImpl.java:594-621 copies the sent title/description, sets modified_by and modified_date.
+          await expectStored(
+            db,
+            'kdiary-edit-schedule-event',
+            {
+              table: 'TBL_KPOST_KDIARY_SCHEDULE',
+              where: { event_id: eventID!, created_by: A.username },
+              columns: {
+                title: ownerTitle,
+                description: 'QA bench diary event',
+                modified_by: A.username,
+                modified_date: filled,
+              },
+              rule: 'editScheduleEvent stores the new title and who edited the event',
+            },
+            endpoints,
+          );
         const editControl = (await ownerView('after-owner-edit'))?.title === ownerTitle;
         expect
           .soft(editControl, `owner control: A edits its own event (HTTP ${ownerEdit.status})`)
@@ -168,6 +189,19 @@ test.describe(
           },
           { label: 'kdiary-xu:participants-owner-control', ...asA },
         );
+        if (ownerAdd.status < 300)
+          // KdiaryScheduleServiceImpl.java:394-407 adds a participant row per entry (the caller as created_by).
+          await expectStored(
+            db,
+            'kdiary-add-participants',
+            {
+              table: 'TBL_KPOST_KDIARY_SCHEDULE_PARTICIPANT',
+              where: { event_id: eventID!, participant: testData.victimKpostId },
+              columns: { user_type: 'PERSONAL', created_by: A.username },
+              rule: 'addparticipants stores a participant row for each participant it was sent',
+            },
+            endpoints,
+          );
         const addControl = hasParticipant(
           await ownerView('after-owner-add'),
           testData.victimKpostId,

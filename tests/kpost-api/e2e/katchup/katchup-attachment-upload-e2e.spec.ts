@@ -1,9 +1,12 @@
 import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
+import type { DatabaseClient } from '@database/database-client';
+import { text } from '@database/kpost-assertions';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
-import { checkOnRealRecord } from '@engine/real-record';
+import { checkOnRealRecord, realRecordIds } from '@engine/real-record';
 import { expect, test } from '@fixtures';
+import { expectStored } from '../../../support/db-stored';
 
 /**
  * Katchup attachment upload, the client's real flow: presign an S3 URL, PUT the file, send a message
@@ -11,6 +14,12 @@ import { expect, test } from '@fixtures';
  * Gated behind `KATCHUP_LIFECYCLE` and `AWS_LIFECYCLE`: it uploads to S3 and sends a real message.
  */
 const A: Principal = AUTH_PROFILES.kpost.principals.find((p) => p.key === 'personal')!;
+
+/** A KPOST ID column holding `id`, compared without case (the token's copy is the DB's spelling). */
+const isId =
+  (id: string) =>
+  (value: unknown): boolean =>
+    text(value)?.toLowerCase() === id.toLowerCase();
 
 test.describe(
   'KPost Katchup · presigned attachment upload @api @kpost-api @katchup',
@@ -21,13 +30,17 @@ test.describe(
       'uploads a real file to S3 and sends a real message; set KATCHUP_LIFECYCLE=true and AWS_LIFECYCLE=true',
     );
 
-    /** Presign, upload a real file, and send a message that references it. Returns the msgID + uuid. */
+    /**
+     * Presign, upload a real file, and send a message that references it. Returns the msgID + uuid.
+     * With `db`, the attachment row the presign reserved is read back too.
+     */
     async function uploadAndSend(
       endpoints: EndpointExecutor,
       fileName: string,
       extension: string,
       contentType: string,
       content: string,
+      db?: DatabaseClient,
     ): Promise<{ msgID?: number; uuid?: string; attachmentUuid: unknown }> {
       const presign = await endpoints.sendTo(
         'aws-katchup-presigned',
@@ -44,6 +57,33 @@ test.describe(
         /([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i,
       )?.[1];
       expect(uuid, 'the presigned URL names a uuid').toBeTruthy();
+      if (db && presign.status < 300 && uuid)
+        // PreSignedURLServiceImpl.java:210-213 and :245-246 fill the row (the S3 key built at :217),
+        // :293 saves it, keyed by the uuid.
+        await expectStored(
+          db,
+          'aws-katchup-presigned',
+          {
+            table: 'TBL_KPOST_KATCHUP_ATTACHMENT',
+            where: { uuid },
+            columns: {
+              kpost_id: isId(A.username),
+              original_file_name: fileName,
+              file_size: String(content.length),
+              s3_file_name: `${uuid}.${extension}`,
+              s3_file_path: (value: unknown) => {
+                const key = text(value)?.toLowerCase() ?? '';
+                return (
+                  key.startsWith(`${A.username.replace('@', '_').toLowerCase()}/katchup/`) &&
+                  key.endsWith(`/${uuid}.${extension}`.toLowerCase())
+                );
+              },
+              delete_status: false,
+            },
+            rule: "katchup/generate-presigned-url reserves an attachment row for the caller with the file's name, size and S3 key",
+          },
+          endpoints,
+        );
 
       // A raw S3 PUT, not a registered KPost endpoint — exactly what the live client does with this URL.
       const putRes = await fetch(url, {
@@ -81,6 +121,7 @@ test.describe(
 
     test('a file uploaded via a presigned S3 URL is actually attached to the sent message', async ({
       endpoints,
+      databases,
     }) => {
       const { msgID, attachmentUuid, uuid } = await uploadAndSend(
         endpoints,
@@ -88,6 +129,7 @@ test.describe(
         'txt',
         'text/plain',
         'QA bench presigned attachment content',
+        databases.for('kpost-api'),
       );
       try {
         // Unlike the legacy multipart route, this flow does attach the uuid.
@@ -102,6 +144,8 @@ test.describe(
 
     test('a selected attachment is forwarded as a new message, with the body the web app sends', async ({
       endpoints,
+      databases,
+      validationEngine,
     }) => {
       const { msgID, uuid } = await uploadAndSend(
         endpoints,
@@ -139,6 +183,54 @@ test.describe(
         expect
           .soft(row?.attachmentUuid, 'carrying exactly the selected attachment')
           .toEqual([uuid]);
+        if (forwarded.status === 200 && forwardedID && uuid) {
+          const db = databases.for('kpost-api');
+          // KatchupControllerV2.java:410 sends it through sendMessage: KatchupServiceImpl.java:389
+          // copies the body with its uuids (attachment_path), :798 saves the 1:1 row.
+          await expectStored(
+            db,
+            'katchup-send-forward-selected-attachment',
+            {
+              table: 'TBL_KPOST_KATCHUP_MESSAGES',
+              where: { msg_id: forwardedID },
+              columns: {
+                sender: isId(A.username),
+                receiver: isId(String(sendShape().receiver)),
+                message_type: 24,
+                subject: 'General',
+                attachment_path: (value: unknown) => {
+                  try {
+                    return (
+                      JSON.stringify(JSON.parse(text(value) ?? 'null')) === JSON.stringify([uuid])
+                    );
+                  } catch {
+                    return false;
+                  }
+                },
+              },
+              rule: 'sendMessageForForwardSelectedAttachment stores a new type-24 message from the caller carrying exactly the selected attachment uuids',
+            },
+            endpoints,
+          );
+        }
+
+        // The full engine on this forward of a real attachment of A's (the sweep's body names none).
+        if (uuid)
+          await checkOnRealRecord(
+            validationEngine,
+            'katchup-send-forward-selected-attachment',
+            {
+              body: sendShape({
+                messageType: 24,
+                subject: 'General',
+                sharedType: 0,
+                status: 0,
+                attachmentCaption: JSON.stringify([]),
+                uuid: [uuid],
+              }),
+            },
+            [uuid],
+          );
       } finally {
         await cleanup(endpoints, forwardedID);
         await cleanup(endpoints, msgID);
@@ -340,14 +432,14 @@ test.describe(
       );
       try {
         test.skip(!uuid, 'the upload named no uuid');
-        for (const id of [
+        for (const id of realRecordIds([
           'katchup-download',
           'katchup-old-download',
           'katchup-download-attachment',
           'katchup-download-from-s3',
           'katchup-download-thumbnail',
           'katchup-media-streaming',
-        ])
+        ]))
           await checkOnRealRecord(validationEngine, id, { pathParams: { uuid: uuid! } }, [uuid!]);
       } finally {
         await cleanup(endpoints, msgID);

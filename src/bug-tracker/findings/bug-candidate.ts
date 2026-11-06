@@ -266,6 +266,7 @@ const LENIENT_INPUT_VALIDATORS = new Set<string>([
   'request.unknown-fields',
   'request.invalid-payload',
   'request.method-not-allowed',
+  'request.multipart',
 ]);
 
 export function isLenientAcceptanceFalsePositive(result: ValidationResult): boolean {

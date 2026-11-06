@@ -38,4 +38,21 @@ test.describe('TokenProvider · reuse a held browser session before logging in @
     expect(await tokens.tokenFor(principal, profile)).toBe('logged-in');
     expect(logins).toBe(1);
   });
+
+  test('forget() makes the next call log in again, for that principal only @framework', async () => {
+    let logins = 0;
+    const tokens = new TokenProvider(() => {
+      logins += 1;
+      return Promise.resolve(`token-${logins}`);
+    }, 'scope-forget');
+    const other = { key: 'personal-2', username: 'qatest2@kpostindia.com' } as unknown as Principal;
+    expect(await tokens.tokenFor(principal, profile)).toBe('token-1');
+    expect(await tokens.tokenFor(other, profile)).toBe('token-2');
+    expect(await tokens.tokenFor(principal, profile), 'cached').toBe('token-1');
+    tokens.forget(principal);
+    expect(await tokens.tokenFor(principal, profile), 'a fresh login after forget').toBe('token-3');
+    expect(await tokens.tokenFor(other, profile), 'the other principal keeps its token').toBe(
+      'token-2',
+    );
+  });
 });

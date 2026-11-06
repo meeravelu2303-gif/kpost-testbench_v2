@@ -2,7 +2,7 @@ import { AUTH_PROFILES } from '@config/auth-profile';
 import type { Principal } from '@config/auth.config';
 import { sendShape } from '@api/definitions/kpost/katchup/send.api';
 import type { EndpointExecutor } from '@engine/endpoint-executor';
-import { checkOnRealRecord } from '@engine/real-record';
+import { checkOnRealRecord, realRecordIds } from '@engine/real-record';
 import { expect, test } from '@fixtures';
 
 /**
@@ -155,13 +155,14 @@ test.describe(
         test.skip(!msgID || !sharedMessageId, 'the send returned no msgID/sharedMessageId');
         // Shared-message info/details and messages-by-reference need a genuinely shared or
         // referenced message (a plain one answers 404), so they are not run on this record.
-        const reads: Array<[string, Parameters<typeof checkOnRealRecord>[2]]> = [
+        type Read = [string, Parameters<typeof checkOnRealRecord>[2]];
+        const reads: Read[] = realRecordIds<Read[]>([
           ['katchup-bulk-message-info', { body: { sharedMessageId } }],
           [
             'katchup-reference-details',
             { body: { referenceMessageIDList: [msgID], sourceMsgID: msgID } },
           ],
-        ];
+        ]);
         for (const [id, spec] of reads) await checkOnRealRecord(validationEngine, id, spec);
       } finally {
         await cleanup(endpoints, msgID);

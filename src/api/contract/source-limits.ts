@@ -25,8 +25,19 @@ export interface SourceLimit {
   source: string;
 }
 
+/**
+ * Why a field has no limit to probe: it is only compared, parsed, used as a flag or never read, so
+ * neither a check nor a column bounds it (cited like a limit).
+ */
+export interface NoLimit {
+  reason: string;
+  source: string;
+}
+
+export type FieldLimits = Partial<Record<LimitKeyword, SourceLimit>> & { none?: NoLimit };
+
 /** Field key: `<section>.<path>`; `[]` marks array items, `(body)` the whole body. */
-export type EndpointLimits = Record<string, Partial<Record<LimitKeyword, SourceLimit>>>;
+export type EndpointLimits = Record<string, FieldLimits>;
 
 interface LimitsDocument {
   suite: string;
@@ -47,6 +58,11 @@ export function sourceLimits(suite: SuiteId, id: string): EndpointLimits | undef
   return DOCUMENTS[suite]?.endpoints[id];
 }
 
+/** The cited reason a field has no limit, when the limits file records one. */
+export function noLimitReason(suite: SuiteId, id: string, field: string): NoLimit | undefined {
+  return sourceLimits(suite, id)?.[field]?.none;
+}
+
 export function sourceLimitIds(suite: SuiteId): string[] {
   return Object.keys(DOCUMENTS[suite]?.endpoints ?? {});
 }
@@ -60,11 +76,14 @@ export function limitSteps(path: string): string[] {
 function withLimitAt(
   schema: JsonSchema,
   steps: readonly string[],
-  limits: Partial<Record<LimitKeyword, SourceLimit>>,
+  limits: FieldLimits,
 ): JsonSchema {
   if (!steps.length) {
+    // A cited "no limit" adds nothing to the schema.
     const keywords = Object.fromEntries(
-      Object.entries(limits).map(([keyword, limit]) => [keyword, limit.value]),
+      Object.entries(limits)
+        .filter((entry): entry is [LimitKeyword, SourceLimit] => entry[0] !== 'none')
+        .map(([keyword, limit]) => [keyword, limit.value]),
     );
     return { ...schema, ...keywords };
   }
